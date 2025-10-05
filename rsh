@@ -5,7 +5,7 @@ require 'socket'
 require 'time'
 
 # ---------------- Version ----------------
-SRSH_VERSION = "0.2.1"
+SRSH_VERSION = "0.2.2"
 
 $0 = "srsh-#{SRSH_VERSION}"
 ENV['SHELL'] = "srsh-#{SRSH_VERSION}"
@@ -16,6 +16,21 @@ Dir.chdir(ENV['HOME'])
 $child_pids = []
 $aliases = {}
 
+# ---------------- History ----------------
+HISTORY_FILE = File.join(Dir.home, ".srsh_history")
+if File.exist?(HISTORY_FILE)
+    File.readlines(HISTORY_FILE).each { |line| Readline::HISTORY.push(line.chomp) }
+end
+
+at_exit do
+    begin
+        File.open(HISTORY_FILE, "w") do |f|
+            Readline::HISTORY.to_a.each { |line| f.puts line }
+        end
+    rescue
+    end
+end
+
 # ---------------- Utilities ----------------
 def color(text, code)
     "\e[#{code}m#{text}\e[0m"
@@ -25,8 +40,8 @@ def random_color
     [31,32,33,34,35,36,37].sample
 end
 
-def random_rainbow_color
-    [31,33,32,36,34,35,91,93,92,96,94,95].sample
+def rainbow_codes
+    [31,33,32,36,34,35,91,93,92,96,94,95]
 end
 
 def expand_vars(str)
@@ -39,16 +54,16 @@ def parse_redirection(cmd)
     append = false
 
     if cmd =~ /(.*)>>(\s*\S+)/
-        cmd = $1.strip
+            cmd = $1.strip
         stdout_file = $2.strip
         append = true
     elsif cmd =~ /(.*)>(\s*\S+)/
-        cmd = $1.strip
+            cmd = $1.strip
         stdout_file = $2.strip
     end
 
     if cmd =~ /(.*)<(\s*\S+)/
-        cmd = $1.strip
+            cmd = $1.strip
         stdin_file = $2.strip
     end
 
@@ -95,24 +110,49 @@ def detect_distro
     "Linux"
 end
 
-def random_quote
-    distro = detect_distro
-    quotes = [
-        "Keep calm and code on.",
-        "Did you try turning it off and on again?",
-        "There’s no place like 127.0.0.1.",
-        "To iterate is human, to recurse divine.",
-        "sudo rm -rf / – Just kidding, don’t do that!",
-        "The shell is mightier than the sword.",
-        "A journey of a thousand commits begins with a single push.",
-        "In case of fire: git commit, git push, leave building.",
-        "Debugging is like being the detective in a crime movie where you are also the murderer.",
-        "Unix is user-friendly. It's just selective about who its friends are.",
-        "Old sysadmins never die, they just become daemons.",
-        "Listen you flatpaker! – Totally Terry Davis",
-        "How is #{distro}? 🤔"
-    ]
-    color(quotes.sample, 35)
+# ---------------- Quotes ----------------
+QUOTES = [
+    "Keep calm and code on.",
+    "Did you try turning it off and on again?",
+    "There’s no place like 127.0.0.1.",
+    "To iterate is human, to recurse divine.",
+    "sudo rm -rf / – Just kidding, don’t do that!",
+    "The shell is mightier than the sword.",
+    "A journey of a thousand commits begins with a single push.",
+    "In case of fire: git commit, git push, leave building.",
+    "Debugging is like being the detective in a crime movie where you are also the murderer.",
+    "Unix is user-friendly. It's just selective about who its friends are.",
+    "Old sysadmins never die, they just become daemons.",
+    "Listen you flatpaker! – Totally Terry Davis",
+    "How is #{detect_distro}? 🤔",
+    "Life is short, but your command history is eternal.",
+    "If at first you don’t succeed, git commit and push anyway.",
+    "rm -rf: the ultimate trust exercise.",
+    "Coding is like magic, but with more coffee.",
+    "There’s no bug, only undocumented features.",
+    "Keep your friends close and your aliases closer.",
+    "Why wait for the future when you can Ctrl+Z it?",
+    "A watched process never completes.",
+    "When in doubt, make it a function.",
+    "Some call it procrastination, we call it debugging curiosity.",
+    "Life is like a terminal; some commands just don’t execute.",
+    "Good code is like a good joke; it needs no explanation.",
+    "sudo: because sometimes responsibility is overrated.",
+    "Pipes make the world go round.",
+    "In bash we trust, in Ruby we wonder.",
+    "A system without errors is like a day without coffee.",
+    "Keep your loops tight and your sleeps short.",
+    "Stack traces are just life giving you directions.",
+    "Your mom called, she wants her semicolons back."
+]
+
+$current_quote = QUOTES.sample
+
+def dynamic_quote
+    chars = $current_quote.chars
+    rainbow = rainbow_codes.cycle
+    colored = chars.map { |c| color(c, rainbow.next) }.join
+    colored
 end
 
 # ---------------- CPU / RAM / Storage ----------------
@@ -150,7 +190,7 @@ def cpu_cores_and_freq
 
     def cpu_info
         prev = read_cpu_times
-        sleep(0.05)
+        sleep 0.05
         current = read_cpu_times
         usage = calculate_cpu_usage(prev, current).round(1)
         cores, freqs = cpu_cores_and_freq
@@ -209,9 +249,15 @@ def cpu_cores_and_freq
             end
             return
         when 'exit','quit'
-            puts color("Bye!",36)
-            $child_pids.each { |pid| Process.kill("TERM", pid) rescue nil }
-            exit 0
+            print color("Do you really wanna leave me? (y/n) ",35)
+            answer = $stdin.gets.chomp.downcase
+            if ['y','yes'].include?(answer)
+                puts color("Bye! Take care!",36)
+                $child_pids.each { |pid| Process.kill("TERM", pid) rescue nil }
+                exit 0
+            else
+                return
+            end
         when 'alias'
             if args[1].nil?
                 $aliases.each { |k,v| puts "#{k}='#{v}'" }
@@ -240,7 +286,7 @@ def cpu_cores_and_freq
             begin
                 exec(*args)
             rescue Errno::ENOENT
-                puts color("Command not found: #{args[0]}", random_rainbow_color)
+                puts color("Command not found: #{args[0]}", rainbow_codes.sample)
                 exit 127
             end
         end
@@ -252,6 +298,15 @@ def cpu_cores_and_freq
             $child_pids.each { |c| Process.kill("INT", c) rescue nil }
         ensure
             $child_pids.delete(pid)
+        end
+    end
+
+    # ---------------- Chained Commands ----------------
+    def run_input_line(input)
+        commands = input.split(/&&|;/).map(&:strip)
+        commands.each do |cmd|
+            next if cmd.empty?
+            run_command(cmd)
         end
     end
 
@@ -290,7 +345,7 @@ def cpu_cores_and_freq
         puts cpu_info
         puts ram_info
         puts storage_info
-        puts random_quote
+        puts dynamic_quote
         puts
         puts color("Coded with love by https://github.com/RobertFlexx",90)
         puts
@@ -311,54 +366,5 @@ def cpu_cores_and_freq
 
         Readline::HISTORY.pop if input.empty?
 
-        if ['exit','quit'].include?(input)
-            print color("Do you really wanna leave me? (y/n) ",35)
-            answer = $stdin.gets.chomp.downcase
-            if ['y','yes'].include?(answer)
-                puts color("Bye! Take care!",36)
-                $child_pids.each { |pid| Process.kill("TERM", pid) rescue nil }
-                break
-            else
-                next
-            end
-        end
-
-        background = input.end_with?('&')
-        input.chomp!('&') if background
-        pipeline = input.split('|').map(&:strip)
-
-        if pipeline.size == 1
-            run_command(pipeline.first)
-            next
-        end
-
-        # ---------------- Pipeline ----------------
-        procs = []
-        prev_read = nil
-        pipeline.each_with_index do |cmd,i|
-            read_pipe, write_pipe = IO.pipe unless i == pipeline.size - 1
-            pid = fork do
-                Signal.trap("INT","DEFAULT")
-                STDIN.reopen(prev_read) if prev_read rescue nil
-                STDOUT.reopen(write_pipe) if i < pipeline.size - 1 rescue nil
-                exec(*Shellwords.shellsplit(expand_vars(cmd))) rescue puts color("Command not found: #{cmd}", random_rainbow_color)
-            end
-            $child_pids << pid
-
-            prev_read.close if prev_read rescue nil
-            write_pipe.close if write_pipe rescue nil
-            prev_read = read_pipe
-            procs << pid
-        end
-
-        procs.each do |pid|
-            begin
-                Process.wait(pid) unless background
-            rescue Interrupt
-                $child_pids.each { |c| Process.kill("INT", c) rescue nil }
-            ensure
-                $child_pids.delete(pid)
-            end
-        end
+        run_input_line(input)
     end
-
