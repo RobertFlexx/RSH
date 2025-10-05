@@ -5,7 +5,7 @@ THIS IS AN ALPHA RELEASE, IT MAY NOT WORK.
 ## Known Issues: 
 - Ctrl + C is a bit messy, but it isnt harmful.
 - Flatpak chaining with 'and' doesn't work.
-- SRSh Doesn't know how to handle shell scripts, attempting to run one will crash the terminal.
+- Running Shell Scripts might not always work. Sometimes it works, other times not so much.
 
 ## Please Consult:
 - if you have any issues with this SRSh version, please post an issue.
