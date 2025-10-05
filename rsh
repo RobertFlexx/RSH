@@ -4,10 +4,17 @@ require 'shellwords'
 require 'socket'
 require 'time'
 
-$0 = "srsh"
-ENV['SHELL'] = 'srsh'
-print "\033]0;srsh\007"
+# ---------------- Version ----------------
+SRSH_VERSION = "0.2.1"
+
+$0 = "srsh-#{SRSH_VERSION}"
+ENV['SHELL'] = "srsh-#{SRSH_VERSION}"
+print "\033]0;srsh-#{SRSH_VERSION}\007"
+
 Dir.chdir(ENV['HOME'])
+
+$child_pids = []
+$aliases = {}
 
 # ---------------- Utilities ----------------
 def color(text, code)
@@ -32,16 +39,16 @@ def parse_redirection(cmd)
     append = false
 
     if cmd =~ /(.*)>>(\s*\S+)/
-            cmd = $1.strip
+        cmd = $1.strip
         stdout_file = $2.strip
         append = true
     elsif cmd =~ /(.*)>(\s*\S+)/
-            cmd = $1.strip
+        cmd = $1.strip
         stdout_file = $2.strip
     end
 
     if cmd =~ /(.*)<(\s*\S+)/
-            cmd = $1.strip
+        cmd = $1.strip
         stdin_file = $2.strip
     end
 
@@ -57,6 +64,22 @@ def human_bytes(bytes)
         unit = units.shift
     end
     "#{format('%.2f', size)} #{unit}"
+end
+
+# ---------------- Aliases ----------------
+def expand_aliases(cmd, seen = [])
+    return cmd if cmd.strip.empty?
+    first_word, rest = cmd.strip.split(' ', 2)
+    return cmd if seen.include?(first_word)
+    seen << first_word
+
+    if $aliases.key?(first_word)
+        replacement = $aliases[first_word]
+        expanded = expand_aliases(replacement, seen)
+        rest ? "#{expanded} #{rest}" : expanded
+    else
+        cmd
+    end
 end
 
 # ---------------- System Info ----------------
@@ -168,6 +191,7 @@ def cpu_cores_and_freq
 
     # ---------------- Command Execution ----------------
     def run_command(cmd)
+        cmd = expand_aliases(cmd.strip)
         cmd = expand_vars(cmd.strip)
         cmd, stdin_file, stdout_file, append = parse_redirection(cmd)
         args = Shellwords.shellsplit(cmd)
@@ -175,24 +199,38 @@ def cpu_cores_and_freq
 
         case args[0]
         when 'cd'
-            begin
-                path = args[1] ? File.expand_path(args[1]) : ENV['HOME']
-                if !File.exist?(path)
-                    puts color("cd: no such file or directory: #{args[1]}",31)
-                elsif !File.directory?(path)
-                    puts color("cd: not a directory: #{args[1]}",31)
-                else
-                    Dir.chdir(path)
-                end
-            rescue Errno::EACCES
-                puts color("cd: permission denied: #{args[1]}",31)
-            rescue => e
-                puts color("cd: #{e.message}",31)
+            path = args[1] ? File.expand_path(args[1]) : ENV['HOME']
+            if !File.exist?(path)
+                puts color("cd: no such file or directory: #{args[1]}",31)
+            elsif !File.directory?(path)
+                puts color("cd: not a directory: #{args[1]}",31)
+            else
+                Dir.chdir(path)
             end
             return
         when 'exit','quit'
             puts color("Bye!",36)
+            $child_pids.each { |pid| Process.kill("TERM", pid) rescue nil }
             exit 0
+        when 'alias'
+            if args[1].nil?
+                $aliases.each { |k,v| puts "#{k}='#{v}'" }
+            else
+                arg = args[1..].join(' ')
+                if arg =~ /^(\w+)=(["']?)(.+?)\2$/
+                        $aliases[$1] = $3
+                else
+                    puts color("Invalid alias format",31)
+                end
+            end
+            return
+        when 'unalias'
+            if args[1]
+                $aliases.delete(args[1])
+            else
+                puts color("unalias: usage: unalias name",31)
+            end
+            return
         end
 
         pid = fork do
@@ -207,10 +245,13 @@ def cpu_cores_and_freq
             end
         end
 
+        $child_pids << pid
         begin
-            Process.wait(pid)  # <-- Safe Ctrl+C handling
+            Process.wait(pid)
         rescue Interrupt
-            puts "^C"
+            $child_pids.each { |c| Process.kill("INT", c) rescue nil }
+        ensure
+            $child_pids.delete(pid)
         end
     end
 
@@ -231,9 +272,20 @@ def cpu_cores_and_freq
         []
     end
 
+    # ---------------- Ctrl+C Handling ----------------
+    Signal.trap("INT") do
+        if $child_pids.any?
+            $child_pids.each { |pid| Process.kill("INT", pid) rescue nil }
+        else
+            print "\n^C\n"
+            Readline::HISTORY.push('') if Readline::HISTORY.empty? || Readline::HISTORY[-1] != ''
+            print prompt(Socket.gethostname, random_color)
+        end
+    end
+
     # ---------------- Welcome ----------------
     def print_welcome
-        puts color("Welcome to srsh - your simple Ruby shell!",36)
+        puts color("Welcome to srsh #{SRSH_VERSION} - your simple Ruby shell!",36)
         puts color("Current Time:",36)+" #{color(current_time,34)}"
         puts cpu_info
         puts ram_info
@@ -243,21 +295,20 @@ def cpu_cores_and_freq
         puts color("Coded with love by https://github.com/RobertFlexx",90)
         puts
     end
-
     print_welcome
 
     # ---------------- Main Loop ----------------
     loop do
-        print "\033]0;srsh\007"
+        print "\033]0;srsh-#{SRSH_VERSION}\007"
         begin
             input = Readline.readline(prompt(hostname,prompt_color), true)
             break if input.nil?
             input.strip!
             next if input.empty?
         rescue Interrupt
-            puts "^C"
             next
         end
+
         Readline::HISTORY.pop if input.empty?
 
         if ['exit','quit'].include?(input)
@@ -265,6 +316,7 @@ def cpu_cores_and_freq
             answer = $stdin.gets.chomp.downcase
             if ['y','yes'].include?(answer)
                 puts color("Bye! Take care!",36)
+                $child_pids.each { |pid| Process.kill("TERM", pid) rescue nil }
                 break
             else
                 next
@@ -291,11 +343,22 @@ def cpu_cores_and_freq
                 STDOUT.reopen(write_pipe) if i < pipeline.size - 1 rescue nil
                 exec(*Shellwords.shellsplit(expand_vars(cmd))) rescue puts color("Command not found: #{cmd}", random_rainbow_color)
             end
+            $child_pids << pid
+
             prev_read.close if prev_read rescue nil
             write_pipe.close if write_pipe rescue nil
             prev_read = read_pipe
             procs << pid
         end
-        procs.each { |pid| Process.wait(pid) } unless background
+
+        procs.each do |pid|
+            begin
+                Process.wait(pid) unless background
+            rescue Interrupt
+                $child_pids.each { |c| Process.kill("INT", c) rescue nil }
+            ensure
+                $child_pids.delete(pid)
+            end
+        end
     end
 
