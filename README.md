@@ -1,6 +1,8 @@
 ## Notes
-(version 0.2.2 released!) This is version 0.2.2, if things dont work, or work optimally. If you notice anything wrong, please consult me.
+(version 0.3.0 released!) This is version 0.2.2, if things dont work, or work optimally. If you notice anything wrong, please consult me.
 THIS IS AN ALPHA RELEASE, IT MAY NOT WORK.
+
+The code itself is written by RobertFlexx, but the comments are written by ChatGPT.
 
 ## Known Issues: 
 - Ctrl + C is a bit messy, but it isnt harmful.
