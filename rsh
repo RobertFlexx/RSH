@@ -3,9 +3,11 @@ require 'readline'
 require 'shellwords'
 require 'socket'
 require 'time'
+require 'etc'
+require 'rbconfig'
 
 # ---------------- Version ----------------
-SRSH_VERSION = "0.2.2"
+SRSH_VERSION = "0.3.0"
 
 $0 = "srsh-#{SRSH_VERSION}"
 ENV['SHELL'] = "srsh-#{SRSH_VERSION}"
@@ -54,16 +56,16 @@ def parse_redirection(cmd)
     append = false
 
     if cmd =~ /(.*)>>(\s*\S+)/
-            cmd = $1.strip
+        cmd = $1.strip
         stdout_file = $2.strip
         append = true
     elsif cmd =~ /(.*)>(\s*\S+)/
-            cmd = $1.strip
+        cmd = $1.strip
         stdout_file = $2.strip
     end
 
     if cmd =~ /(.*)<(\s*\S+)/
-            cmd = $1.strip
+        cmd = $1.strip
         stdin_file = $2.strip
     end
 
@@ -79,6 +81,14 @@ def human_bytes(bytes)
         unit = units.shift
     end
     "#{format('%.2f', size)} #{unit}"
+end
+
+def nice_bar(p, w = 30, code = 32)
+    p = [[p, 0.0].max, 1.0].min
+    f = (p * w).round
+    b = "█" * f + "░" * (w - f)
+    pct = (p * 100).to_i
+    "#{color("[#{b}]", code)} #{color(sprintf("%3d%%", pct), 37)}"
 end
 
 # ---------------- Aliases ----------------
@@ -107,7 +117,7 @@ def detect_distro
         line = File.read('/etc/os-release').lines.find { |l| l.start_with?("PRETTY_NAME=") }
         return line.split('=').last.strip.delete('"') if line
     end
-    "Linux"
+    "#{RbConfig::CONFIG['host_os']}"
 end
 
 # ---------------- Quotes ----------------
@@ -195,7 +205,7 @@ def cpu_cores_and_freq
         usage = calculate_cpu_usage(prev, current).round(1)
         cores, freqs = cpu_cores_and_freq
         freq_display = freqs.empty? ? "N/A" : freqs.map { |f| "#{f.round(0)}MHz"}.join(', ')
-        color("CPU Usage:",36)+" #{color("#{usage}%",33)} | "+color("Cores:",36)+" #{color(cores.to_s,32)} | "+color("Freqs:",36)+" #{color(freq_display,35)}"
+        "#{color("CPU Usage:",36)} #{color("#{usage}%",33)} | #{color("Cores:",36)} #{color(cores.to_s,32)} | #{color("Freqs:",36)} #{color(freq_display,35)}"
     end
 
     def ram_info
@@ -208,9 +218,9 @@ def cpu_cores_and_freq
             total = meminfo['MemTotal'] || 0
             free = (meminfo['MemFree']||0) + (meminfo['Buffers']||0) + (meminfo['Cached']||0)
             used = total - free
-            color("RAM Usage:",36)+" #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
+            "#{color("RAM Usage:",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
         else
-            color("RAM Usage:",36)+" Info not available"
+            "#{color("RAM Usage:",36)} Info not available"
         end
     end
 
@@ -221,36 +231,116 @@ def cpu_cores_and_freq
             total = stat.bytes_total
             free = stat.bytes_available
             used = total - free
-            color("Storage Usage (#{Dir.pwd}):",36)+" #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
+            "#{color("Storage Usage (#{Dir.pwd}):",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
         rescue LoadError
-            color("Install 'sys-filesystem' gem for storage info:",31)+" #{color('gem install sys-filesystem',33)}"
+            "#{color("Install 'sys-filesystem' gem for storage info:",31)} #{color('gem install sys-filesystem',33)}"
         rescue
-            color("Storage Usage:",36)+" Info not available"
+            "#{color("Storage Usage:",36)} Info not available"
         end
     end
 
-    # ---------------- Command Execution ----------------
-    def run_command(cmd)
-        cmd = expand_aliases(cmd.strip)
-        cmd = expand_vars(cmd.strip)
-        cmd, stdin_file, stdout_file, append = parse_redirection(cmd)
-        args = Shellwords.shellsplit(cmd)
-        return if args.empty?
+    # ---------------- Builtin helpers ----------------
+    def builtin_help
+        puts color('=' * 60, "1;35")
+        puts color("srsh #{SRSH_VERSION} - Builtin Commands", "1;33")
+        puts color(sprintf("%-15s%-45s", "Command", "Description"), "1;36")
+        puts color('-' * 60, "1;34")
+        puts color(sprintf("%-15s", "cd"), "1;36") + "Change directory"
+        puts color(sprintf("%-15s", "pwd"), "1;36") + "Print working directory"
+        puts color(sprintf("%-15s", "exit / quit"), "1;36") + "Exit the shell"
+        puts color(sprintf("%-15s", "alias"), "1;36") + "Create or list aliases"
+        puts color(sprintf("%-15s", "unalias"), "1;36") + "Remove alias"
+        puts color(sprintf("%-15s", "jobs"), "1;36") + "Show background jobs (tracked pids)"
+        puts color(sprintf("%-15s", "systemfetch"), "1;36") + "Display system information"
+        puts color(sprintf("%-15s", "help"), "1;36") + "Show this help message"
+        puts color('=' * 60, "1;35")
+    end
 
-        case args[0]
-        when 'cd'
-            path = args[1] ? File.expand_path(args[1]) : ENV['HOME']
-            if !File.exist?(path)
-                puts color("cd: no such file or directory: #{args[1]}",31)
-            elsif !File.directory?(path)
-                puts color("cd: not a directory: #{args[1]}",31)
-            else
-                Dir.chdir(path)
-            end
-            return
-        when 'exit','quit'
-            print color("Do you really wanna leave me? (y/n) ",35)
-            answer = $stdin.gets.chomp.downcase
+    def builtin_systemfetch
+        user = ENV['USER'] || Etc.getlogin || Etc.getpwuid.name
+        host = Socket.gethostname
+        os = detect_distro
+        ruby_ver = RUBY_VERSION
+        cpu_percent = begin
+        prev = read_cpu_times
+        sleep 0.05
+        cur = read_cpu_times
+        calculate_cpu_usage(prev, cur).round(1)
+    rescue
+        0.0
+    end
+
+    mem_percent = begin
+    if File.exist?('/proc/meminfo')
+        meminfo = {}
+        File.read('/proc/meminfo').each_line do |line|
+            k,v = line.split(':')
+            meminfo[k.strip] = v.strip.split.first.to_i * 1024
+        end
+        total = meminfo['MemTotal'] || 1
+        free = (meminfo['MemAvailable'] || meminfo['MemFree'] || 0)
+        used = total - free
+        (used.to_f / total.to_f * 100).round(1)
+    else
+        0.0
+    end
+rescue
+    0.0
+end
+
+puts color('=' * 60, "1;35")
+puts color("srsh System Information", "1;33")
+puts color("User:        ", "1;36") + color("#{user}@#{host}", "0;37")
+puts color("OS:          ", "1;36") + color(os, "0;37")
+puts color("Shell:       ", "1;36") + color("srsh v#{SRSH_VERSION}", "0;37")
+puts color("Ruby:        ", "1;36") + color(ruby_ver, "0;37")
+puts color("CPU Usage:   ", "1;36") + nice_bar(cpu_percent / 100.0, 30, 32)
+puts color("RAM Usage:   ", "1;36") + nice_bar(mem_percent / 100.0, 30, 35)
+puts color('=' * 60, "1;35")
+end
+
+def builtin_jobs
+    if $child_pids.empty?
+        puts color("No tracked child jobs.", 36)
+        return
+    end
+    $child_pids.each do |pid|
+        status = begin
+        Process.kill(0, pid)
+        'running'
+    rescue Errno::ESRCH
+        'done'
+    rescue Errno::EPERM
+        'running'
+    end
+    puts "[#{pid}] #{status}"
+end
+end
+
+# ---------------- Command Execution ----------------
+def run_command(cmd)
+    cmd = expand_aliases(cmd.strip)
+    cmd = expand_vars(cmd.strip)
+    cmd, stdin_file, stdout_file, append = parse_redirection(cmd)
+    args = Shellwords.shellsplit(cmd) rescue []
+    return if args.empty?
+
+    case args[0]
+    when 'cd'
+        path = args[1] ? File.expand_path(args[1]) : ENV['HOME']
+        if !File.exist?(path)
+            puts color("cd: no such file or directory: #{args[1]}",31)
+        elsif !File.directory?(path)
+            puts color("cd: not a directory: #{args[1]}",31)
+        else
+            Dir.chdir(path)
+        end
+        return
+    when 'exit','quit'
+        print color("Do you really wanna leave me? (y/n) ",35)
+        answer = $stdin.gets
+        if answer
+            answer = answer.chomp.downcase
             if ['y','yes'].include?(answer)
                 puts color("Bye! Take care!",36)
                 $child_pids.each { |pid| Process.kill("TERM", pid) rescue nil }
@@ -258,113 +348,138 @@ def cpu_cores_and_freq
             else
                 return
             end
-        when 'alias'
-            if args[1].nil?
-                $aliases.each { |k,v| puts "#{k}='#{v}'" }
-            else
-                arg = args[1..].join(' ')
-                if arg =~ /^(\w+)=(["']?)(.+?)\2$/
-                        $aliases[$1] = $3
-                else
-                    puts color("Invalid alias format",31)
-                end
-            end
-            return
-        when 'unalias'
-            if args[1]
-                $aliases.delete(args[1])
-            else
-                puts color("unalias: usage: unalias name",31)
-            end
-            return
-        end
-
-        pid = fork do
-            Signal.trap("INT","DEFAULT")
-            STDIN.reopen(File.open(stdin_file,'r')) if stdin_file rescue nil
-            STDOUT.reopen(File.open(stdout_file, append ? 'a' : 'w')) if stdout_file rescue nil
-            begin
-                exec(*args)
-            rescue Errno::ENOENT
-                puts color("Command not found: #{args[0]}", rainbow_codes.sample)
-                exit 127
-            end
-        end
-
-        $child_pids << pid
-        begin
-            Process.wait(pid)
-        rescue Interrupt
-            $child_pids.each { |c| Process.kill("INT", c) rescue nil }
-        ensure
-            $child_pids.delete(pid)
-        end
-    end
-
-    # ---------------- Chained Commands ----------------
-    def run_input_line(input)
-        commands = input.split(/&&|;/).map(&:strip)
-        commands.each do |cmd|
-            next if cmd.empty?
-            run_command(cmd)
-        end
-    end
-
-    # ---------------- Prompt ----------------
-    hostname = Socket.gethostname
-    prompt_color = random_color
-    def prompt(hostname, prompt_color)
-        "#{color(Dir.pwd,33)} #{color(hostname,36)}#{color(' > ', prompt_color)}"
-    end
-
-    # ---------------- Completion ----------------
-    Readline.completion_append_character = ' '
-    Readline.completion_proc = proc do |s|
-        files = Dir.glob("#{s}*").map { |f| File.directory?(f) ? "#{f}/" : f }
-        @executables ||= ENV['PATH'].split(':').flat_map { |p| Dir.glob("#{p}/*").map { |f| File.basename(f) if File.executable?(f) }.compact }
-        (files + @executables.grep(/^#{Regexp.escape(s)}/)).uniq
-    rescue
-        []
-    end
-
-    # ---------------- Ctrl+C Handling ----------------
-    Signal.trap("INT") do
-        if $child_pids.any?
-            $child_pids.each { |pid| Process.kill("INT", pid) rescue nil }
         else
-            print "\n^C\n"
-            Readline::HISTORY.push('') if Readline::HISTORY.empty? || Readline::HISTORY[-1] != ''
-            print prompt(Socket.gethostname, random_color)
+            exit 0
         end
+    when 'alias'
+        if args[1].nil?
+            $aliases.each { |k,v| puts "#{k}='#{v}'" }
+        else
+            arg = args[1..].join(' ')
+            if arg =~ /^(\w+)=(["']?)(.+?)\2$/
+                $aliases[$1] = $3
+            else
+                puts color("Invalid alias format",31)
+            end
+        end
+        return
+    when 'unalias'
+        if args[1]
+            $aliases.delete(args[1])
+        else
+            puts color("unalias: usage: unalias name",31)
+        end
+        return
+    when 'help'
+        builtin_help
+        return
+    when 'systemfetch'
+        builtin_systemfetch
+        return
+    when 'jobs'
+        builtin_jobs
+        return
+    when 'pwd'
+        puts color(Dir.pwd, 36)
+        return
     end
 
-    # ---------------- Welcome ----------------
-    def print_welcome
-        puts color("Welcome to srsh #{SRSH_VERSION} - your simple Ruby shell!",36)
-        puts color("Current Time:",36)+" #{color(current_time,34)}"
-        puts cpu_info
-        puts ram_info
-        puts storage_info
-        puts dynamic_quote
-        puts
-        puts color("Coded with love by https://github.com/RobertFlexx",90)
-        puts
-    end
-    print_welcome
-
-    # ---------------- Main Loop ----------------
-    loop do
-        print "\033]0;srsh-#{SRSH_VERSION}\007"
+    pid = fork do
+        Signal.trap("INT","DEFAULT")
+        if stdin_file
+            begin
+                STDIN.reopen(File.open(stdin_file,'r'))
+            rescue
+            end
+        end
+        if stdout_file
+            begin
+                STDOUT.reopen(File.open(stdout_file, append ? 'a' : 'w'))
+            rescue
+            end
+        end
         begin
-            input = Readline.readline(prompt(hostname,prompt_color), true)
-            break if input.nil?
-            input.strip!
-            next if input.empty?
-        rescue Interrupt
-            next
+            exec(*args)
+        rescue Errno::ENOENT
+            puts color("Command not found: #{args[0]}", rainbow_codes.sample)
+            exit 127
         end
-
-        Readline::HISTORY.pop if input.empty?
-
-        run_input_line(input)
     end
+
+    $child_pids << pid
+    begin
+        Process.wait(pid)
+    rescue Interrupt
+        $child_pids.each { |c| Process.kill("INT", c) rescue nil }
+    ensure
+        $child_pids.delete(pid)
+    end
+end
+
+# ---------------- Chained Commands ----------------
+def run_input_line(input)
+    commands = input.split(/&&|;/).map(&:strip)
+    commands.each do |cmd|
+        next if cmd.empty?
+        run_command(cmd)
+    end
+end
+
+# ---------------- Prompt ----------------
+hostname = Socket.gethostname
+prompt_color = random_color
+def prompt(hostname, prompt_color)
+    "#{color(Dir.pwd,33)} #{color(hostname,36)}#{color(' > ', prompt_color)}"
+end
+
+# ---------------- Completion ----------------
+Readline.completion_append_character = ' '
+Readline.completion_proc = proc do |s|
+    files = Dir.glob("#{s}*").map { |f| File.directory?(f) ? "#{f}/" : f }
+    @executables ||= ENV['PATH'].split(':').flat_map { |p| Dir.glob("#{p}/*").map { |f| File.basename(f) if File.executable?(f) }.compact }
+    (files + @executables.grep(/^#{Regexp.escape(s)}/)).uniq
+rescue
+    []
+end
+
+# ---------------- Ctrl+C Handling ----------------
+Signal.trap("INT") do
+    if $child_pids.any?
+        $child_pids.each { |pid| Process.kill("INT", pid) rescue nil }
+    else
+        print "\n^C\n"
+        Readline::HISTORY.push('') if Readline::HISTORY.empty? || Readline::HISTORY[-1] != ''
+        print prompt(Socket.gethostname, random_color)
+    end
+end
+
+# ---------------- Welcome ----------------
+def print_welcome
+    puts color("Welcome to srsh #{SRSH_VERSION} - your simple Ruby shell!",36)
+    puts color("Current Time:",36)+" #{color(current_time,34)}"
+    puts cpu_info
+    puts ram_info
+    puts storage_info
+    puts dynamic_quote
+    puts
+    puts color("Coded with love by https://github.com/RobertFlexx",90)
+    puts
+end
+print_welcome
+
+# ---------------- Main Loop ----------------
+loop do
+    print "\033]0;srsh-#{SRSH_VERSION}\007"
+    begin
+        input = Readline.readline(prompt(hostname,prompt_color), true)
+        break if input.nil?
+        input.strip!
+        next if input.empty?
+    rescue Interrupt
+        next
+    end
+
+    Readline::HISTORY.pop if input.empty?
+
+    run_input_line(input)
+end
