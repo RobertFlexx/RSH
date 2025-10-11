@@ -7,13 +7,13 @@ require 'etc'
 require 'rbconfig'
 
 # ---------------- Version ----------------
-SRSH_VERSION = "0.3.0"
+SRSH_VERSION = "0.3.1"
 
 $0 = "srsh-#{SRSH_VERSION}"
 ENV['SHELL'] = "srsh-#{SRSH_VERSION}"
 print "\033]0;srsh-#{SRSH_VERSION}\007"
 
-Dir.chdir(ENV['HOME'])
+Dir.chdir(ENV['HOME']) if ENV['HOME']
 
 $child_pids = []
 $aliases = {}
@@ -55,17 +55,17 @@ def parse_redirection(cmd)
     stdout_file = nil
     append = false
 
-    if cmd =~ /(.*)>>(\s*\S+)/
-        cmd = $1.strip
+    if cmd =~ /(.*)>>\s*(\S+)/
+            cmd = $1.strip
         stdout_file = $2.strip
         append = true
-    elsif cmd =~ /(.*)>(\s*\S+)/
-        cmd = $1.strip
+    elsif cmd =~ /(.*)>\s*(\S+)/
+            cmd = $1.strip
         stdout_file = $2.strip
     end
 
-    if cmd =~ /(.*)<(\s*\S+)/
-        cmd = $1.strip
+    if cmd =~ /(.*)<\s*(\S+)/
+            cmd = $1.strip
         stdin_file = $2.strip
     end
 
@@ -93,7 +93,7 @@ end
 
 # ---------------- Aliases ----------------
 def expand_aliases(cmd, seen = [])
-    return cmd if cmd.strip.empty?
+    return cmd if cmd.nil? || cmd.strip.empty?
     first_word, rest = cmd.strip.split(' ', 2)
     return cmd if seen.include?(first_word)
     seen << first_word
@@ -161,8 +161,7 @@ $current_quote = QUOTES.sample
 def dynamic_quote
     chars = $current_quote.chars
     rainbow = rainbow_codes.cycle
-    colored = chars.map { |c| color(c, rainbow.next) }.join
-    colored
+    chars.map { |c| color(c, rainbow.next) }.join
 end
 
 # ---------------- CPU / RAM / Storage ----------------
@@ -175,10 +174,10 @@ end
 
 def calculate_cpu_usage(prev, current)
     return 0.0 if prev.empty? || current.empty?
-    prev_idle = prev[3] + (prev[4]||0)
-    idle = current[3] + (current[4]||0)
-    prev_non_idle = prev[0]+prev[1]+prev[2]+(prev[5]||0)+(prev[6]||0)+(prev[7]||0)
-    non_idle = current[0]+current[1]+current[2]+(current[5]||0)+(current[6]||0)+(current[7]||0)
+    prev_idle = prev[3] + (prev[4] || 0)
+    idle = current[3] + (current[4] || 0)
+    prev_non_idle = prev[0] + prev[1] + prev[2] + (prev[5] || 0) + (prev[6] || 0) + (prev[7] || 0)
+    non_idle = current[0] + current[1] + current[2] + (current[5] || 0) + (current[6] || 0) + (current[7] || 0)
     prev_total = prev_idle + prev_non_idle
     total = idle + non_idle
     totald = total - prev_total
@@ -188,115 +187,117 @@ def calculate_cpu_usage(prev, current)
 end
 
 def cpu_cores_and_freq
-    return [0,[]] unless File.exist?('/proc/cpuinfo')
+    return [0, []] unless File.exist?('/proc/cpuinfo')
     cores = 0
     freqs = []
     File.foreach('/proc/cpuinfo') do |line|
         cores += 1 if line =~ /^processor\s*:\s*\d+/
-                freqs << $1.to_f if line =~ /^cpu MHz\s*:\s*([\d.]+)/
-                end
-        [cores, freqs.first(cores)]
+                if line =~ /^cpu MHz\s*:\s*([\d.]+)/
+                freqs << $1.to_f
     end
+end
+[cores, freqs.first(cores)]
+end
 
-    def cpu_info
-        prev = read_cpu_times
-        sleep 0.05
-        current = read_cpu_times
-        usage = calculate_cpu_usage(prev, current).round(1)
-        cores, freqs = cpu_cores_and_freq
-        freq_display = freqs.empty? ? "N/A" : freqs.map { |f| "#{f.round(0)}MHz"}.join(', ')
-        "#{color("CPU Usage:",36)} #{color("#{usage}%",33)} | #{color("Cores:",36)} #{color(cores.to_s,32)} | #{color("Freqs:",36)} #{color(freq_display,35)}"
-    end
+def cpu_info
+    prev = read_cpu_times
+    sleep 0.05
+    current = read_cpu_times
+    usage = calculate_cpu_usage(prev, current).round(1)
+    cores, freqs = cpu_cores_and_freq
+    freq_display = freqs.empty? ? "N/A" : freqs.map { |f| "#{f.round(0)}MHz" }.join(', ')
+    "#{color("CPU Usage:",36)} #{color("#{usage}%",33)} | #{color("Cores:",36)} #{color(cores.to_s,32)} | #{color("Freqs:",36)} #{color(freq_display,35)}"
+end
 
-    def ram_info
-        if File.exist?('/proc/meminfo')
-            meminfo = {}
-            File.read('/proc/meminfo').each_line do |line|
-                key,val = line.split(':')
-                meminfo[key.strip] = val.strip.split.first.to_i * 1024
-            end
-            total = meminfo['MemTotal'] || 0
-            free = (meminfo['MemFree']||0) + (meminfo['Buffers']||0) + (meminfo['Cached']||0)
-            used = total - free
-            "#{color("RAM Usage:",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
-        else
-            "#{color("RAM Usage:",36)} Info not available"
-        end
-    end
-
-    def storage_info
-        begin
-            require 'sys/filesystem'
-            stat = Sys::Filesystem.stat(Dir.pwd)
-            total = stat.bytes_total
-            free = stat.bytes_available
-            used = total - free
-            "#{color("Storage Usage (#{Dir.pwd}):",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
-        rescue LoadError
-            "#{color("Install 'sys-filesystem' gem for storage info:",31)} #{color('gem install sys-filesystem',33)}"
-        rescue
-            "#{color("Storage Usage:",36)} Info not available"
-        end
-    end
-
-    # ---------------- Builtin helpers ----------------
-    def builtin_help
-        puts color('=' * 60, "1;35")
-        puts color("srsh #{SRSH_VERSION} - Builtin Commands", "1;33")
-        puts color(sprintf("%-15s%-45s", "Command", "Description"), "1;36")
-        puts color('-' * 60, "1;34")
-        puts color(sprintf("%-15s", "cd"), "1;36") + "Change directory"
-        puts color(sprintf("%-15s", "pwd"), "1;36") + "Print working directory"
-        puts color(sprintf("%-15s", "exit / quit"), "1;36") + "Exit the shell"
-        puts color(sprintf("%-15s", "alias"), "1;36") + "Create or list aliases"
-        puts color(sprintf("%-15s", "unalias"), "1;36") + "Remove alias"
-        puts color(sprintf("%-15s", "jobs"), "1;36") + "Show background jobs (tracked pids)"
-        puts color(sprintf("%-15s", "systemfetch"), "1;36") + "Display system information"
-        puts color(sprintf("%-15s", "help"), "1;36") + "Show this help message"
-        puts color('=' * 60, "1;35")
-    end
-
-    def builtin_systemfetch
-        user = ENV['USER'] || Etc.getlogin || Etc.getpwuid.name
-        host = Socket.gethostname
-        os = detect_distro
-        ruby_ver = RUBY_VERSION
-        cpu_percent = begin
-        prev = read_cpu_times
-        sleep 0.05
-        cur = read_cpu_times
-        calculate_cpu_usage(prev, cur).round(1)
-    rescue
-        0.0
-    end
-
-    mem_percent = begin
+def ram_info
     if File.exist?('/proc/meminfo')
         meminfo = {}
         File.read('/proc/meminfo').each_line do |line|
-            k,v = line.split(':')
-            meminfo[k.strip] = v.strip.split.first.to_i * 1024
+            key, val = line.split(':')
+            meminfo[key.strip] = val.strip.split.first.to_i * 1024 if key && val
         end
-        total = meminfo['MemTotal'] || 1
-        free = (meminfo['MemAvailable'] || meminfo['MemFree'] || 0)
+        total = meminfo['MemTotal'] || 0
+        free = (meminfo['MemFree'] || 0) + (meminfo['Buffers'] || 0) + (meminfo['Cached'] || 0)
         used = total - free
-        (used.to_f / total.to_f * 100).round(1)
+        "#{color("RAM Usage:",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
     else
-        0.0
+        "#{color("RAM Usage:",36)} Info not available"
     end
+end
+
+def storage_info
+    begin
+        require 'sys/filesystem'
+        stat = Sys::Filesystem.stat(Dir.pwd)
+        total = stat.bytes_total
+        free = stat.bytes_available
+        used = total - free
+        "#{color("Storage Usage (#{Dir.pwd}):",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
+    rescue LoadError
+        "#{color("Install 'sys-filesystem' gem for storage info:",31)} #{color('gem install sys-filesystem',33)}"
+    rescue
+        "#{color("Storage Usage:",36)} Info not available"
+    end
+end
+
+# ---------------- Builtin helpers ----------------
+def builtin_help
+    puts color('=' * 60, "1;35")
+    puts color("srsh #{SRSH_VERSION} - Builtin Commands", "1;33")
+    puts color(sprintf("%-15s%-45s", "Command", "Description"), "1;36")
+    puts color('-' * 60, "1;34")
+    puts color(sprintf("%-15s", "cd"), "1;36") + "Change directory"
+    puts color(sprintf("%-15s", "pwd"), "1;36") + "Print working directory"
+    puts color(sprintf("%-15s", "exit / quit"), "1;36") + "Exit the shell"
+    puts color(sprintf("%-15s", "alias"), "1;36") + "Create or list aliases"
+    puts color(sprintf("%-15s", "unalias"), "1;36") + "Remove alias"
+    puts color(sprintf("%-15s", "jobs"), "1;36") + "Show background jobs (tracked pids)"
+    puts color(sprintf("%-15s", "systemfetch"), "1;36") + "Display system information"
+    puts color(sprintf("%-15s", "help"), "1;36") + "Show this help message"
+    puts color('=' * 60, "1;35")
+end
+
+def builtin_systemfetch
+    user = ENV['USER'] || Etc.getlogin || Etc.getpwuid.name rescue ENV['USER'] || Etc.getlogin
+    host = Socket.gethostname
+    os = detect_distro
+    ruby_ver = RUBY_VERSION
+    cpu_percent = begin
+    prev = read_cpu_times
+    sleep 0.05
+    cur = read_cpu_times
+    calculate_cpu_usage(prev, cur).round(1)
 rescue
     0.0
 end
 
-puts color('=' * 60, "1;35")
-puts color("srsh System Information", "1;33")
-puts color("User:        ", "1;36") + color("#{user}@#{host}", "0;37")
-puts color("OS:          ", "1;36") + color(os, "0;37")
-puts color("Shell:       ", "1;36") + color("srsh v#{SRSH_VERSION}", "0;37")
-puts color("Ruby:        ", "1;36") + color(ruby_ver, "0;37")
-puts color("CPU Usage:   ", "1;36") + nice_bar(cpu_percent / 100.0, 30, 32)
-puts color("RAM Usage:   ", "1;36") + nice_bar(mem_percent / 100.0, 30, 35)
-puts color('=' * 60, "1;35")
+mem_percent = begin
+if File.exist?('/proc/meminfo')
+    meminfo = {}
+    File.read('/proc/meminfo').each_line do |line|
+        k, v = line.split(':')
+        meminfo[k.strip] = v.strip.split.first.to_i * 1024 if k && v
+    end
+    total = meminfo['MemTotal'] || 1
+    free = (meminfo['MemAvailable'] || meminfo['MemFree'] || 0)
+    used = total - free
+    (used.to_f / total.to_f * 100).round(1)
+else
+    0.0
+end
+  rescue
+      0.0
+  end
+
+  puts color('=' * 60, "1;35")
+  puts color("srsh System Information", "1;33")
+  puts color("User:        ", "1;36") + color("#{user}@#{host}", "0;37")
+  puts color("OS:          ", "1;36") + color(os, "0;37")
+  puts color("Shell:       ", "1;36") + color("srsh v#{SRSH_VERSION}", "0;37")
+  puts color("Ruby:        ", "1;36") + color(ruby_ver, "0;37")
+  puts color("CPU Usage:   ", "1;36") + nice_bar(cpu_percent / 100.0, 30, 32)
+  puts color("RAM Usage:   ", "1;36") + nice_bar(mem_percent / 100.0, 30, 35)
+  puts color('=' * 60, "1;35")
 end
 
 def builtin_jobs
@@ -319,6 +320,7 @@ end
 
 # ---------------- Command Execution ----------------
 def run_command(cmd)
+    cmd = cmd.to_s
     cmd = expand_aliases(cmd.strip)
     cmd = expand_vars(cmd.strip)
     cmd, stdin_file, stdout_file, append = parse_redirection(cmd)
@@ -357,7 +359,7 @@ def run_command(cmd)
         else
             arg = args[1..].join(' ')
             if arg =~ /^(\w+)=(["']?)(.+?)\2$/
-                $aliases[$1] = $3
+                    $aliases[$1] = $3
             else
                 puts color("Invalid alias format",31)
             end
@@ -384,6 +386,17 @@ def run_command(cmd)
         return
     end
 
+    command_path = args[0]
+    if command_path && (command_path.include?('/') || command_path.start_with?('.'))
+        begin
+            if File.directory?(command_path)
+                puts color("srsh: #{command_path}: is a directory", 31)
+                return
+            end
+        rescue
+        end
+    end
+
     pid = fork do
         Signal.trap("INT","DEFAULT")
         if stdin_file
@@ -403,6 +416,9 @@ def run_command(cmd)
         rescue Errno::ENOENT
             puts color("Command not found: #{args[0]}", rainbow_codes.sample)
             exit 127
+        rescue Errno::EACCES
+            puts color("Permission denied: #{args[0]}", 31)
+            exit 126
         end
     end
 
@@ -435,8 +451,9 @@ end
 # ---------------- Completion ----------------
 Readline.completion_append_character = ' '
 Readline.completion_proc = proc do |s|
-    files = Dir.glob("#{s}*").map { |f| File.directory?(f) ? "#{f}/" : f }
-    @executables ||= ENV['PATH'].split(':').flat_map { |p| Dir.glob("#{p}/*").map { |f| File.basename(f) if File.executable?(f) }.compact }
+    files = Dir.glob("#{s}*").map { |f| File.directory?(f) ? "#{f}/" : f } rescue []
+    path_entries = (ENV['PATH'] || "").split(':')
+    @executables ||= path_entries.flat_map { |p| Dir.glob("#{p}/*").map { |f| File.basename(f) if File.executable?(f) }.compact rescue [] }
     (files + @executables.grep(/^#{Regexp.escape(s)}/)).uniq
 rescue
     []
