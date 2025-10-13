@@ -7,7 +7,7 @@ require 'etc'
 require 'rbconfig'
 
 # ---------------- Version ----------------
-SRSH_VERSION = "0.3.1"
+SRSH_VERSION = "0.4.0"
 
 $0 = "srsh-#{SRSH_VERSION}"
 ENV['SHELL'] = "srsh-#{SRSH_VERSION}"
@@ -253,6 +253,8 @@ def builtin_help
     puts color(sprintf("%-15s", "unalias"), "1;36") + "Remove alias"
     puts color(sprintf("%-15s", "jobs"), "1;36") + "Show background jobs (tracked pids)"
     puts color(sprintf("%-15s", "systemfetch"), "1;36") + "Display system information"
+    puts color(sprintf("%-15s", "hist"), "1;36") + "Show shell history"
+    puts color(sprintf("%-15s", "clearhist"), "1;36") + "Clear saved history (memory + file)"
     puts color(sprintf("%-15s", "help"), "1;36") + "Show this help message"
     puts color('=' * 60, "1;35")
 end
@@ -316,6 +318,29 @@ def builtin_jobs
     end
     puts "[#{pid}] #{status}"
 end
+end
+
+# ---------------- History builtins ----------------
+def builtin_hist
+    i = 0
+    Readline::HISTORY.to_a.each do |h|
+        i += 1
+        printf "%5d  %s\n", i, h
+    end
+end
+
+def builtin_clearhist
+    begin
+        Readline::HISTORY.clear
+    rescue
+    end
+    if File.exist?(HISTORY_FILE)
+        begin
+            File.delete(HISTORY_FILE)
+        rescue
+        end
+    end
+    puts color("History cleared (memory + file).", 32)
 end
 
 # ---------------- Command Execution ----------------
@@ -384,6 +409,12 @@ def run_command(cmd)
     when 'pwd'
         puts color(Dir.pwd, 36)
         return
+    when 'hist'
+        builtin_hist
+        return
+    when 'clearhist'
+        builtin_clearhist
+        return
     end
 
     command_path = args[0]
@@ -426,7 +457,16 @@ def run_command(cmd)
     begin
         Process.wait(pid)
     rescue Interrupt
-        $child_pids.each { |c| Process.kill("INT", c) rescue nil }
+        $child_pids.each do |c|
+            begin
+                Process.kill("INT", -c)
+            rescue
+                begin
+                    Process.kill("INT", c)
+                rescue
+                end
+            end
+        end
     ensure
         $child_pids.delete(pid)
     end
@@ -460,15 +500,7 @@ rescue
 end
 
 # ---------------- Ctrl+C Handling ----------------
-Signal.trap("INT") do
-    if $child_pids.any?
-        $child_pids.each { |pid| Process.kill("INT", pid) rescue nil }
-    else
-        print "\n^C\n"
-        Readline::HISTORY.push('') if Readline::HISTORY.empty? || Readline::HISTORY[-1] != ''
-        print prompt(Socket.gethostname, random_color)
-    end
-end
+#  doesnt exist no more bozo, read main loop :P
 
 # ---------------- Welcome ----------------
 def print_welcome
@@ -488,11 +520,50 @@ print_welcome
 loop do
     print "\033]0;srsh-#{SRSH_VERSION}\007"
     begin
+        trap_printed = false
+        saved_int = Signal.trap("INT") do
+            if $child_pids.any?
+                $child_pids.each do |pid|
+                    begin
+                        Process.kill("INT", -pid)
+                    rescue
+                        begin
+                            Process.kill("INT", pid)
+                        rescue
+                        end
+                    end
+                end
+            else
+                begin
+                    STDOUT.print("^C\n")
+                    STDOUT.flush
+                rescue
+                end
+                trap_printed = true
+                raise Interrupt
+            end
+        end
+
         input = Readline.readline(prompt(hostname,prompt_color), true)
+        Signal.trap("INT", saved_int)
         break if input.nil?
         input.strip!
         next if input.empty?
+
     rescue Interrupt
+        begin
+            Signal.trap("INT", saved_int) if defined?(saved_int)
+        rescue
+        end
+
+        if trap_printed
+            trap_printed = false
+            Readline::HISTORY.pop if Readline::HISTORY.size > 0 && Readline::HISTORY[-1].to_s.strip == ""
+            next
+        end
+
+        puts "^C"
+        Readline::HISTORY.pop if Readline::HISTORY.size > 0 && Readline::HISTORY[-1].to_s.strip == ""
         next
     end
 
