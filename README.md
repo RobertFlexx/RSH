@@ -1,4 +1,7 @@
-(version 0.4.0 released!) This is version 0.4.0, if things dont work, or work optimally. If you notice anything wrong, please consult me.
+
+## (DISCONTINUED!!)
+
+(DISCONTINUED!) This is version 0.4.0, if things dont work, or work optimally. If you notice anything wrong, please consult me.
 (Fixed Control-C, fixed some bugs, added new features (check via help command))
 THIS IS AN ALPHA RELEASE, IT MAY NOT WORK.
 
