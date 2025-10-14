@@ -364,20 +364,8 @@ def run_command(cmd)
         end
         return
     when 'exit','quit'
-        print color("Do you really wanna leave me? (y/n) ",35)
-        answer = $stdin.gets
-        if answer
-            answer = answer.chomp.downcase
-            if ['y','yes'].include?(answer)
-                puts color("Bye! Take care!",36)
-                $child_pids.each { |pid| Process.kill("TERM", pid) rescue nil }
-                exit 0
-            else
-                return
-            end
-        else
-            exit 0
-        end
+        $child_pids.each { |pid| Process.kill("TERM", pid) rescue nil }
+        exit 0
     when 'alias'
         if args[1].nil?
             $aliases.each { |k,v| puts "#{k}='#{v}'" }
