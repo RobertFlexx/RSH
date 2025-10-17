@@ -1,5 +1,5 @@
 
-This is version 0.4.0, if things dont work, or work optimally. If you notice anything wrong, please consult me.
+This is version 0.5.0, if things dont work, or work optimally. If you notice anything wrong, please consult me.
 (Fixed Control-C, fixed some bugs, added new features (check via help command))
 THIS IS AN ALPHA RELEASE, IT MAY NOT WORK.
 
