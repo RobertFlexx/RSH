@@ -7,7 +7,7 @@ require 'etc'
 require 'rbconfig'
 
 # ---------------- Version ----------------
-SRSH_VERSION = "0.4.0"
+SRSH_VERSION = "0.5.0"
 
 $0 = "srsh-#{SRSH_VERSION}"
 ENV['SHELL'] = "srsh-#{SRSH_VERSION}"
@@ -31,6 +31,20 @@ at_exit do
         end
     rescue
     end
+end
+
+# ---------------- RC file (create if missing) ----------------
+RC_FILE = File.join(Dir.home, ".srshrc")
+begin
+    unless File.exist?(RC_FILE)
+    File.write(RC_FILE, <<~RC)
+    # ~/.srshrc — srsh configuration
+    # This file was created automatically by srsh v#{SRSH_VERSION}.
+    # You can keep personal notes or planned settings here.
+    # (Currently not sourced by srsh runtime.)
+    RC
+    end
+rescue
 end
 
 # ---------------- Utilities ----------------
