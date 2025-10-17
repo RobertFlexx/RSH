@@ -33,20 +33,6 @@ at_exit do
     end
 end
 
-# ---------------- RC file (create if missing) ----------------
-RC_FILE = File.join(Dir.home, ".srshrc")
-begin
-    unless File.exist?(RC_FILE)
-    File.write(RC_FILE, <<~RC)
-    # ~/.srshrc — srsh configuration
-    # This file was created automatically by srsh v#{SRSH_VERSION}.
-    # You can keep personal notes or planned settings here.
-    # (Currently not sourced by srsh runtime.)
-    RC
-    end
-rescue
-end
-
 # ---------------- Utilities ----------------
 def color(text, code)
     "\e[#{code}m#{text}\e[0m"
