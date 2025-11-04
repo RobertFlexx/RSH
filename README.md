@@ -14,8 +14,12 @@ The code itself is written by RobertFlexx, but the comments are written by ChatG
 * if you have any issues with this SRSh version, please post an issue.
 
 ## How to Install:
+```console
+gem install srsh
+```
+##Then youre done! enjoy!
 
-### Clone the repository
+### Clone the repository (How to instal sourcebuild)
 
 ```console
 git clone https://github.com/RobertFlexx/RSH
