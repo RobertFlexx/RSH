@@ -1,3 +1,5 @@
+## SRSH IS NOW A GEM! (see installation instructions below)
+
 This is version 0.6.0, if things dont work, or work optimally. If you notice anything wrong, please consult me.
 (Fixed Control-C, fixed some bugs, added new features (check via help command)
 THIS IS A BETA RELEASE, IT MAY NOT WORK.
