@@ -17,9 +17,9 @@ The code itself is written by RobertFlexx, but the comments are written by ChatG
 ```console
 gem install srsh
 ```
-##Then youre done! enjoy!
+## Then youre done! enjoy!
 
-### Clone the repository (How to instal sourcebuild)
+### Clone the repository (How to install classic way)
 
 ```console
 git clone https://github.com/RobertFlexx/RSH
