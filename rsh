@@ -15,15 +15,16 @@ print "\033]0;srsh-#{SRSH_VERSION}\007"
 
 Dir.chdir(ENV['HOME']) if ENV['HOME']
 
-$child_pids = []
-$aliases = {}
+$child_pids       = []
+$aliases          = {}
+$last_render_rows = 0
 
 Signal.trap("INT", "IGNORE")
 
 # ---------------- History ----------------
 HISTORY_FILE = File.join(Dir.home, ".srsh_history")
 HISTORY = if File.exist?(HISTORY_FILE)
-File.readlines(HISTORY_FILE, chomp: true)
+  File.readlines(HISTORY_FILE, chomp: true)
 else
   []
 end
@@ -41,12 +42,12 @@ end
 RC_FILE = File.join(Dir.home, ".srshrc")
 begin
   unless File.exist?(RC_FILE)
-  File.write(RC_FILE, <<~RC)
-  # ~/.srshrc — srsh configuration
-  # This file was created automatically by srsh v#{SRSH_VERSION}.
-  # You can keep personal notes or planned settings here.
-  # (Currently not sourced by srsh runtime.)
-  RC
+    File.write(RC_FILE, <<~RC)
+      # ~/.srshrc — srsh configuration
+      # This file was created automatically by srsh v#{SRSH_VERSION}.
+      # You can keep personal notes or planned settings here.
+      # (Currently not sourced by srsh runtime.)
+    RC
   end
 rescue
 end
@@ -57,11 +58,11 @@ def color(text, code)
 end
 
 def random_color
-  [31,32,33,34,35,36,37].sample
+  [31, 32, 33, 34, 35, 36, 37].sample
 end
 
 def rainbow_codes
-  [31,33,32,36,34,35,91,93,92,96,94,95]
+  [31, 33, 32, 36, 34, 35, 91, 93, 92, 96, 94, 95]
 end
 
 def expand_vars(str)
@@ -69,21 +70,21 @@ def expand_vars(str)
 end
 
 def parse_redirection(cmd)
-  stdin_file = nil
+  stdin_file  = nil
   stdout_file = nil
-  append = false
+  append      = false
 
   if cmd =~ /(.*)>>\s*(\S+)/
-    cmd = $1.strip
+    cmd         = $1.strip
     stdout_file = $2.strip
-    append = true
+    append      = true
   elsif cmd =~ /(.*)>\s*(\S+)/
-    cmd = $1.strip
+    cmd         = $1.strip
     stdout_file = $2.strip
   end
 
   if cmd =~ /(.*)<\s*(\S+)/
-    cmd = $1.strip
+    cmd        = $1.strip
     stdin_file = $2.strip
   end
 
@@ -91,12 +92,12 @@ def parse_redirection(cmd)
 end
 
 def human_bytes(bytes)
-  units = ['B','KB','MB','GB','TB']
-  size = bytes.to_f
-  unit = units.shift
+  units = ['B', 'KB', 'MB', 'GB', 'TB']
+  size  = bytes.to_f
+  unit  = units.shift
   while size > 1024 && !units.empty?
     size /= 1024
-    unit = units.shift
+    unit  = units.shift
   end
   "#{format('%.2f', size)} #{unit}"
 end
@@ -117,207 +118,344 @@ end
 
 def strip_ansi(str)
   str.to_s.gsub(/\e\[[0-9;]*m/, '')
-                     end
+end
 
-                    # ---------------- Aliases ----------------
-                    def expand_aliases(cmd, seen = [])
-                    return cmd if cmd.nil? || cmd.strip.empty?
-                    first_word, rest = cmd.strip.split(' ', 2)
-                    return cmd if seen.include?(first_word)
-                    seen << first_word
+# ---------------- Aliases ----------------
+def expand_aliases(cmd, seen = [])
+  return cmd if cmd.nil? || cmd.strip.empty?
+  first_word, rest = cmd.strip.split(' ', 2)
+  return cmd if seen.include?(first_word)
+  seen << first_word
 
-                    if $aliases.key?(first_word)
-                    replacement = $aliases[first_word]
-                    expanded = expand_aliases(replacement, seen)
-                    rest ? "#{expanded} #{rest}" : expanded
-                    else
-                    cmd
-                    end
-                    end
+  if $aliases.key?(first_word)
+    replacement = $aliases[first_word]
+    expanded    = expand_aliases(replacement, seen)
+    rest ? "#{expanded} #{rest}" : expanded
+  else
+    cmd
+  end
+end
 
-                    # ---------------- System Info ----------------
-                    def current_time
-                    Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")
-                    end
+# ---------------- System Info ----------------
+def current_time
+  Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")
+end
 
-                    def detect_distro
-                    if File.exist?('/etc/os-release')
-                    line = File.read('/etc/os-release').lines.find { |l|
-                                                                     l.start_with?('PRETTY_NAME="') || l.start_with?('PRETTY_NAME=')
-                                                                   }
-                    return line.split('=').last.strip.delete('"') if line
-                    end
-                    "#{RbConfig::CONFIG['host_os']}"
-                    end
+def detect_distro
+  if File.exist?('/etc/os-release')
+    line = File.read('/etc/os-release').lines.find { |l|
+      l.start_with?('PRETTY_NAME="') || l.start_with?('PRETTY_NAME=')
+    }
+    return line.split('=').last.strip.delete('"') if line
+  end
+  "#{RbConfig::CONFIG['host_os']}"
+end
 
-                    # ---------------- Quotes ----------------
-                    QUOTES = [
-                              "Keep calm and code on.",
-                              "Did you try turning it off and on again?",
-                              "There’s no place like 127.0.0.1.",
-                              "To iterate is human, to recurse divine.",
-                              "sudo rm -rf / – Just kidding, don’t do that!",
-                              "The shell is mightier than the sword.",
-                              "A journey of a thousand commits begins with a single push.",
-                              "In case of fire: git commit, git push, leave building.",
-                              "Debugging is like being the detective in a crime movie where you are also the murderer.",
-                              "Unix is user-friendly. It's just selective about who its friends are.",
-                              "Old sysadmins never die, they just become daemons.",
-                              "Listen you flatpaker! – Totally Terry Davis",
-                              "How is #{detect_distro}? 🤔",
-                              "Life is short, but your command history is eternal.",
-                              "If at first you don’t succeed, git commit and push anyway.",
-                              "rm -rf: the ultimate trust exercise.",
-                              "Coding is like magic, but with more coffee.",
-                              "There’s no bug, only undocumented features.",
-                              "Keep your friends close and your aliases closer.",
-                              "Why wait for the future when you can Ctrl+Z it?",
-                              "A watched process never completes.",
-                              "When in doubt, make it a function.",
-                              "Some call it procrastination, we call it debugging curiosity.",
-                              "Life is like a terminal; some commands just don’t execute.",
-                              "Good code is like a good joke; it needs no explanation.",
-                              "sudo: because sometimes responsibility is overrated.",
-                              "Pipes make the world go round.",
-                              "In bash we trust, in Ruby we wonder.",
-                              "A system without errors is like a day without coffee.",
-                              "Keep your loops tight and your sleeps short.",
-                              "Stack traces are just life giving you directions.",
-                              "Your mom called, she wants her semicolons back."
-                             ]
+def os_type
+  host = RbConfig::CONFIG['host_os'].to_s
+  case host
+  when /linux/i
+    :linux
+  when /darwin/i
+    :mac
+  when /bsd/i
+    :bsd
+  else
+    :other
+  end
+end
 
-                    $current_quote = QUOTES.sample
+# ---------------- Quotes ----------------
+QUOTES = [
+  "Keep calm and code on.",
+  "Did you try turning it off and on again?",
+  "There’s no place like 127.0.0.1.",
+  "To iterate is human, to recurse divine.",
+  "sudo rm -rf / – Just kidding, don’t do that!",
+  "The shell is mightier than the sword.",
+  "A journey of a thousand commits begins with a single push.",
+  "In case of fire: git commit, git push, leave building.",
+  "Debugging is like being the detective in a crime movie where you are also the murderer.",
+  "Unix is user-friendly. It's just selective about who its friends are.",
+  "Old sysadmins never die, they just become daemons.",
+  "Listen you flatpaker! – Totally Terry Davis",
+  "How is #{detect_distro}? 🤔",
+  "Life is short, but your command history is eternal.",
+  "If at first you don’t succeed, git commit and push anyway.",
+  "rm -rf: the ultimate trust exercise.",
+  "Coding is like magic, but with more coffee.",
+  "There’s no bug, only undocumented features.",
+  "Keep your friends close and your aliases closer.",
+  "Why wait for the future when you can Ctrl+Z it?",
+  "A watched process never completes.",
+  "When in doubt, make it a function.",
+  "Some call it procrastination, we call it debugging curiosity.",
+  "Life is like a terminal; some commands just don’t execute.",
+  "Good code is like a good joke; it needs no explanation.",
+  "sudo: because sometimes responsibility is overrated.",
+  "Pipes make the world go round.",
+  "In bash we trust, in Ruby we wonder.",
+  "A system without errors is like a day without coffee.",
+  "Keep your loops tight and your sleeps short.",
+  "Stack traces are just life giving you directions.",
+  "Your mom called, she wants her semicolons back."
+]
 
-                    def dynamic_quote
-                    chars = $current_quote.chars
-                    rainbow = rainbow_codes.cycle
-                    chars.map { |c| color(c, rainbow.next) }.join
-                    end
+$current_quote = QUOTES.sample
 
-                    # ---------------- CPU / RAM / Storage ----------------
-                    def read_cpu_times
-                    return [] unless File.exist?('/proc/stat')
-                    cpu_line = File.readlines('/proc/stat').find { |line| line.start_with?('cpu ') }
-                    return [] unless cpu_line
-                    cpu_line.split[1..-1].map(&:to_i)
-                    end
+def dynamic_quote
+  chars   = $current_quote.chars
+  rainbow = rainbow_codes.cycle
+  chars.map { |c| color(c, rainbow.next) }.join
+end
 
-                    def calculate_cpu_usage(prev, current)
-                    return 0.0 if prev.empty? || current.empty?
-                    prev_idle = prev[3] + (prev[4] || 0)
-                    idle = current[3] + (current[4] || 0)
-                    prev_non_idle = prev[0] + prev[1] + prev[2] + (prev[5] || 0) + (prev[6] || 0) + (prev[7] || 0)
-                    non_idle = current[0] + current[1] + current[2] + (current[5] || 0) + (current[6] || 0) + (current[7] || 0)
-                    prev_total = prev_idle + prev_non_idle
-                    total = idle + non_idle
-                    totald = total - prev_total
-                    idled = idle - prev_idle
-                    return 0.0 if totald <= 0
-                    ((totald - idled).to_f / totald) * 100
-                    end
+# ---------------- CPU / RAM / Storage ----------------
+def read_cpu_times
+  return [] unless File.exist?('/proc/stat')
+  cpu_line = File.readlines('/proc/stat').find { |line| line.start_with?('cpu ') }
+  return [] unless cpu_line
+  cpu_line.split[1..-1].map(&:to_i)
+end
 
-                    def cpu_cores_and_freq
-                    return [0, []] unless File.exist?('/proc/cpuinfo')
-                    cores = 0
-                    freqs = []
-                    File.foreach('/proc/cpuinfo') do |line|
-                    cores += 1 if line =~ /^processor\s*:\s*\d+/
-                    if line =~ /^cpu MHz\s*:\s*([\d.]+)/
-                    freqs << $1.to_f
-                    end
-                    end
-                    [cores, freqs.first(cores)]
-                    end
+def calculate_cpu_usage(prev, current)
+  return 0.0 if prev.empty? || current.empty?
+  prev_idle     = prev[3] + (prev[4] || 0)
+  idle          = current[3] + (current[4] || 0)
+  prev_non_idle = prev[0] + prev[1] + prev[2] +
+                  (prev[5] || 0) + (prev[6] || 0) + (prev[7] || 0)
+  non_idle      = current[0] + current[1] + current[2] +
+                  (current[5] || 0) + (current[6] || 0) + (current[7] || 0)
+  prev_total = prev_idle + prev_non_idle
+  total      = idle + non_idle
+  totald     = total - prev_total
+  idled      = idle - prev_idle
+  return 0.0 if totald <= 0
+  ((totald - idled).to_f / totald) * 100
+end
 
-                    def cpu_info
-                    prev = read_cpu_times
-                    sleep 0.05
-                    current = read_cpu_times
-                    usage = calculate_cpu_usage(prev, current).round(1)
-                    cores, freqs = cpu_cores_and_freq
-                    freq_display = freqs.empty? ? "N/A" : freqs.map { |f| "#{f.round(0)}MHz" }.join(', ')
-                    "#{color("CPU Usage:",36)} #{color("#{usage}%",33)} | " \
-                    "#{color("Cores:",36)} #{color(cores.to_s,32)} | " \
-                    "#{color("Freqs:",36)} #{color(freq_display,35)}"
-                    end
+def cpu_cores_and_freq
+  return [0, []] unless File.exist?('/proc/cpuinfo')
+  cores = 0
+  freqs = []
+  File.foreach('/proc/cpuinfo') do |line|
+    cores += 1 if line =~ /^processor\s*:\s*\d+/
+    if line =~ /^cpu MHz\s*:\s*([\d.]+)/
+      freqs << $1.to_f
+    end
+  end
+  [cores, freqs.first(cores)]
+end
 
-                    def ram_info
-                    if File.exist?('/proc/meminfo')
-                    meminfo = {}
-                    File.read('/proc/meminfo').each_line do |line|
-                    key, val = line.split(':')
-                    meminfo[key.strip] = val.strip.split.first.to_i * 1024 if key && val
-                    end
-                    total = meminfo['MemTotal'] || 0
-                    free = (meminfo['MemFree'] || 0) + (meminfo['Buffers'] || 0) + (meminfo['Cached'] || 0)
-                    used = total - free
-                    "#{color("RAM Usage:",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
-                    else
-                    "#{color("RAM Usage:",36)} Info not available"
-                    end
-                    end
+def cpu_info
+  usage        = 0.0
+  cores        = 0
+  freq_display = "N/A"
 
-                    def storage_info
-                    begin
-                    require 'sys/filesystem'
-                    stat = Sys::Filesystem.stat(Dir.pwd)
-                    total = stat.bytes_total
-                    free = stat.bytes_available
-                    used = total - free
-                    "#{color("Storage Usage (#{Dir.pwd}):",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
-                    rescue LoadError
-                    "#{color("Install 'sys-filesystem' gem for storage info:",31)} #{color('gem install sys-filesystem',33)}"
-                    rescue
-                    "#{color("Storage Usage:",36)} Info not available"
-                    end
-                    end
+  case os_type
+  when :linux
+    prev    = read_cpu_times
+    sleep 0.05
+    current = read_cpu_times
+    usage   = calculate_cpu_usage(prev, current).round(1)
+    cores, freqs = cpu_cores_and_freq
+    freq_display = freqs.empty? ? "N/A" : freqs.map { |f| "#{f.round(0)}MHz" }.join(', ')
+  else
+    cores = begin
+      `sysctl -n hw.ncpu 2>/dev/null`.to_i
+    rescue
+      0
+    end
 
-                    # ---------------- Builtin helpers ----------------
-                    def builtin_help
-                    puts color('=' * 60, "1;35")
-                    puts color("srsh #{SRSH_VERSION} - Builtin Commands", "1;33")
-                    puts color(sprintf("%-15s%-45s", "Command", "Description"), "1;36")
-                    puts color('-' * 60, "1;34")
-                    puts color(sprintf("%-15s", "cd"), "1;36")          + "Change directory"
-                    puts color(sprintf("%-15s", "pwd"), "1;36")         + "Print working directory"
-                    puts color(sprintf("%-15s", "exit / quit"), "1;36") + "Exit the shell"
-                    puts color(sprintf("%-15s", "alias"), "1;36")       + "Create or list aliases"
-                    puts color(sprintf("%-15s", "unalias"), "1;36")     + "Remove alias"
-                    puts color(sprintf("%-15s", "jobs"), "1;36")        + "Show background jobs (tracked pids)"
-                    puts color(sprintf("%-15s", "systemfetch"), "1;36") + "Display system information"
-                    puts color(sprintf("%-15s", "hist"), "1;36")        + "Show shell history"
-                    puts color(sprintf("%-15s", "clearhist"), "1;36")   + "Clear saved history (memory + file)"
-                    puts color(sprintf("%-15s", "help"), "1;36")        + "Show this help message"
-                    puts color('=' * 60, "1;35")
-                    end
+    raw_freq_hz = begin
+      `sysctl -n hw.cpufrequency 2>/dev/null`.to_i
+    rescue
+      0
+    end
 
-                    def builtin_systemfetch
-                    user = ENV['USER'] || Etc.getlogin || Etc.getpwuid.name rescue ENV['USER'] || Etc.getlogin
-                    host = Socket.gethostname
-                    os = detect_distro
-                    ruby_ver = RUBY_VERSION
-                    cpu_percent = begin
-                    prev = read_cpu_times
-                    sleep 0.05
-                    cur = read_cpu_times
-                    calculate_cpu_usage(prev, cur).round(1)
-                    rescue
-                    0.0
-                    end
+    freq_display =
+      if raw_freq_hz > 0
+        mhz = (raw_freq_hz.to_f / 1_000_000.0).round(0)
+        "#{mhz.to_i}MHz"
+      else
+        "N/A"
+      end
 
-                    mem_percent = begin
-                    if File.exist?('/proc/meminfo')
-                    meminfo = {}
-                    File.read('/proc/meminfo').each_line do |line|
-                    k, v = line.split(':')
-                    meminfo[k.strip] = v.strip.split.first.to_i * 1024 if k && v
-                    end
-                    total = meminfo['MemTotal'] || 1
-                    free = (meminfo['MemAvailable'] || meminfo['MemFree'] || 0)
-                    used = total - free
-                    (used.to_f / total.to_f * 100).round(1)
-                    else
-                          0.0
+    usage = begin
+      ps_output = `ps -A -o %cpu 2>/dev/null`
+      lines     = ps_output.lines
+      values    = lines[1..-1] || []
+      sum       = values.map { |l| l.to_f }.inject(0.0, :+)
+      if cores > 0
+        (sum / cores).round(1)
+      else
+        sum.round(1)
+      end
+    rescue
+      0.0
+    end
+  end
+
+  "#{color("CPU Usage:",36)} #{color("#{usage}%",33)} | " \
+  "#{color("Cores:",36)} #{color(cores.to_s,32)} | " \
+  "#{color("Freqs:",36)} #{color(freq_display,35)}"
+end
+
+def ram_info
+  case os_type
+  when :linux
+    if File.exist?('/proc/meminfo')
+      meminfo = {}
+      File.read('/proc/meminfo').each_line do |line|
+        key, val = line.split(':')
+        meminfo[key.strip] = val.strip.split.first.to_i * 1024 if key && val
+      end
+      total = meminfo['MemTotal'] || 0
+      free  = (meminfo['MemFree'] || 0) + (meminfo['Buffers'] || 0) + (meminfo['Cached'] || 0)
+      used  = total - free
+      "#{color("RAM Usage:",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
+    else
+      "#{color("RAM Usage:",36)} Info not available"
+    end
+  else
+    begin
+      if os_type == :mac
+        total = `sysctl -n hw.memsize 2>/dev/null`.to_i
+        return "#{color("RAM Usage:",36)} Info not available" if total <= 0
+
+        vm = `vm_stat 2>/dev/null`
+        page_size = vm[/page size of (\d+) bytes/, 1].to_i
+        page_size = 4096 if page_size <= 0
+
+        stats = {}
+        vm.each_line do |line|
+          if line =~ /^(.+):\s+(\d+)\./
+            stats[$1] = $2.to_i
+          end
+        end
+
+        used_pages = 0
+        %w[Pages active Pages wired down Pages occupied by compressor].each do |k|
+          used_pages += stats[k].to_i
+        end
+        used = used_pages * page_size
+
+        "#{color("RAM Usage:",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
+      else
+        total = `sysctl -n hw.physmem 2>/dev/null`.to_i
+        total = `sysctl -n hw.realmem 2>/dev/null`.to_i if total <= 0
+        return "#{color("RAM Usage:",36)} Info not available" if total <= 0
+        "#{color("RAM Usage:",36)} #{color("Unknown",33)} / #{color(human_bytes(total),32)}"
+      end
+    rescue
+      "#{color("RAM Usage:",36)} Info not available"
+    end
+  end
+end
+
+def storage_info
+  begin
+    require 'sys/filesystem'
+    stat  = Sys::Filesystem.stat(Dir.pwd)
+    total = stat.bytes_total
+    free  = stat.bytes_available
+    used  = total - free
+    "#{color("Storage Usage (#{Dir.pwd}):",36)} #{color(human_bytes(used),33)} / #{color(human_bytes(total),32)}"
+  rescue LoadError
+    "#{color("Install 'sys-filesystem' gem for storage info:",31)} #{color('gem install sys-filesystem',33)}"
+  rescue
+    "#{color("Storage Usage:",36)} Info not available"
+  end
+end
+
+# ---------------- Builtin helpers ----------------
+def builtin_help
+  puts color('=' * 60, "1;35")
+  puts color("srsh #{SRSH_VERSION} - Builtin Commands", "1;33")
+  puts color(sprintf("%-15s%-45s", "Command", "Description"), "1;36")
+  puts color('-' * 60, "1;34")
+  puts color(sprintf("%-15s", "cd"), "1;36")          + "Change directory"
+  puts color(sprintf("%-15s", "pwd"), "1;36")         + "Print working directory"
+  puts color(sprintf("%-15s", "exit / quit"), "1;36") + "Exit the shell"
+  puts color(sprintf("%-15s", "alias"), "1;36")       + "Create or list aliases"
+  puts color(sprintf("%-15s", "unalias"), "1;36")     + "Remove alias"
+  puts color(sprintf("%-15s", "jobs"), "1;36")        + "Show background jobs (tracked pids)"
+  puts color(sprintf("%-15s", "systemfetch"), "1;36") + "Display system information"
+  puts color(sprintf("%-15s", "hist"), "1;36")        + "Show shell history"
+  puts color(sprintf("%-15s", "clearhist"), "1;36")   + "Clear saved history (memory + file)"
+  puts color(sprintf("%-15s", "help"), "1;36")        + "Show this help message"
+  puts color('=' * 60, "1;35")
+end
+
+def builtin_systemfetch
+  user     = ENV['USER'] || Etc.getlogin || Etc.getpwuid.name rescue ENV['USER'] || Etc.getlogin
+  host     = Socket.gethostname
+  os       = detect_distro
+  ruby_ver = RUBY_VERSION
+
+  cpu_percent = begin
+    case os_type
+    when :linux
+      prev = read_cpu_times
+      sleep 0.05
+      cur  = read_cpu_times
+      calculate_cpu_usage(prev, cur).round(1)
+    else
+      cores = `sysctl -n hw.ncpu 2>/dev/null`.to_i rescue 0
+      ps_output = `ps -A -o %cpu 2>/dev/null`
+      lines     = ps_output.lines
+      values    = lines[1..-1] || []
+      sum       = values.map { |l| l.to_f }.inject(0.0, :+)
+      if cores > 0
+        (sum / cores).round(1)
+      else
+        sum.round(1)
+      end
+    end
+  rescue
+    0.0
+  end
+
+  mem_percent = begin
+    case os_type
+    when :linux
+      if File.exist?('/proc/meminfo')
+        meminfo = {}
+        File.read('/proc/meminfo').each_line do |line|
+          k, v = line.split(':')
+          meminfo[k.strip] = v.strip.split.first.to_i * 1024 if k && v
+        end
+        total = meminfo['MemTotal'] || 1
+        free  = (meminfo['MemAvailable'] || meminfo['MemFree'] || 0)
+        used  = total - free
+        (used.to_f / total.to_f * 100).round(1)
+      else
+        0.0
+      end
+    when :mac
+      total = `sysctl -n hw.memsize 2>/dev/null`.to_i
+      if total <= 0
+        0.0
+      else
+        vm = `vm_stat 2>/dev/null`
+        page_size = vm[/page size of (\d+) bytes/, 1].to_i
+        page_size = 4096 if page_size <= 0
+
+        stats = {}
+        vm.each_line do |line|
+          if line =~ /^(.+):\s+(\d+)\./
+            stats[$1] = $2.to_i
+          end
+        end
+
+        used_pages = 0
+        %w[Pages active Pages wired down Pages occupied by compressor].each do |k|
+          used_pages += stats[k].to_i
+        end
+        used = used_pages * page_size
+        ((used.to_f / total.to_f) * 100).round(1)
+      end
+    else
+      0.0
     end
   rescue
     0.0
@@ -373,19 +511,19 @@ end
 def print_columns_colored(labels)
   return if labels.nil? || labels.empty?
 
-  width = terminal_width
+  width           = terminal_width
   visible_lengths = labels.map { |s| strip_ansi(s).length }
-  max_len = visible_lengths.max || 0
-  col_width = [max_len + 2, 4].max
-  cols = [width / col_width, 1].max
-  rows = (labels.length.to_f / cols).ceil
+  max_len         = visible_lengths.max || 0
+  col_width       = [max_len + 2, 4].max
+  cols            = [width / col_width, 1].max
+  rows            = (labels.length.to_f / cols).ceil
 
   rows.times do |r|
     line = ""
     cols.times do |c|
       idx = c * rows + r
       break if idx >= labels.length
-      label = labels[idx]
+      label   = labels[idx]
       visible = strip_ansi(label).length
       padding = col_width - visible
       line << label << (" " * padding)
@@ -554,7 +692,7 @@ def run_input_line(input)
 end
 
 # ---------------- Prompt ----------------
-hostname = Socket.gethostname
+hostname     = Socket.gethostname
 prompt_color = random_color
 
 def prompt(hostname, prompt_color)
@@ -577,15 +715,15 @@ end
 def tab_completions_for(prefix, first_word, at_first_word)
   prefix ||= ""
 
-  dir = "."
+  dir  = "."
   base = prefix
 
   if prefix.include?('/')
     if prefix.end_with?('/')
-      dir = prefix.chomp('/')
+      dir  = prefix.chomp('/')
       base = ""
     else
-      dir = File.dirname(prefix)
+      dir  = File.dirname(prefix)
       base = File.basename(prefix)
     end
     dir = "." if dir.nil? || dir.empty?
@@ -646,7 +784,7 @@ def longest_common_prefix(strings)
 end
 
 def render_line(prompt_str, buffer, cursor, show_ghost = true)
-  buffer ||= ""
+  buffer = buffer || ""
   cursor = [[cursor, 0].max, buffer.length].min
 
   ghost_tail = ""
@@ -655,8 +793,27 @@ def render_line(prompt_str, buffer, cursor, show_ghost = true)
     ghost_tail = suggestion ? suggestion[buffer.length..-1].to_s : ""
   end
 
+  width = terminal_width
+  prompt_vis = strip_ansi(prompt_str).length
+  total_vis  = prompt_vis + buffer.length + ghost_tail.length
+  rows       = [(total_vis.to_f / width).ceil, 1].max
+
+  # Clear previous render block (only what we drew last time)
+  if $last_render_rows && $last_render_rows > 0
+    STDOUT.print("\r")
+    ($last_render_rows - 1).times do
+      STDOUT.print("\e[1A\r") # move up a line, to column 0
+    end
+    $last_render_rows.times do |i|
+      STDOUT.print("\e[0K")   # clear this line
+      STDOUT.print("\n") if i < $last_render_rows - 1
+    end
+    ($last_render_rows - 1).times do
+      STDOUT.print("\e[1A\r") # move back up to first line of block
+    end
+  end
+
   STDOUT.print("\r")
-  STDOUT.print("\e[0K")
   STDOUT.print(prompt_str)
   STDOUT.print(buffer)
   STDOUT.print(color(ghost_tail, "2")) unless ghost_tail.empty?
@@ -664,17 +821,19 @@ def render_line(prompt_str, buffer, cursor, show_ghost = true)
   move_left = ghost_tail.length + (buffer.length - cursor)
   STDOUT.print("\e[#{move_left}D") if move_left > 0
   STDOUT.flush
+
+  $last_render_rows = rows
 end
 
 # --------- NEAT MULTI-COLUMN TAB LIST (bash-style) ----------
 def print_tab_list(comps)
   return if comps.empty?
 
-  width = terminal_width
-  max_len = comps.map { |s| s.length }.max || 0
+  width     = terminal_width
+  max_len   = comps.map { |s| s.length }.max || 0
   col_width = [max_len + 2, 4].max
-  cols = [width / col_width, 1].max
-  rows = (comps.length.to_f / cols).ceil
+  cols      = [width / col_width, 1].max
+  rows      = (comps.length.to_f / cols).ceil
 
   STDOUT.print("\r\n")
   rows.times do |r|
@@ -682,9 +841,9 @@ def print_tab_list(comps)
     cols.times do |c|
       idx = c * rows + r
       break if idx >= comps.length
-      item = comps[idx]
+      item    = comps[idx]
       padding = col_width - item.length
-      line << item << (" " * padding)
+      line   << item << (" " * padding)
     end
     STDOUT.print("\r")
     STDOUT.print(line.rstrip)
@@ -695,24 +854,24 @@ def print_tab_list(comps)
 end
 
 def handle_tab_completion(prompt_str, buffer, cursor, last_tab_prefix, tab_cycle)
-  buffer ||= ""
+  buffer = buffer || ""
   cursor = [[cursor, 0].max, buffer.length].min
 
   wstart = buffer.rindex(/[ \t]/, cursor - 1) || -1
   wstart += 1
   prefix = buffer[wstart...cursor] || ""
 
-  before_word = buffer[0...wstart]
+  before_word   = buffer[0...wstart]
   at_first_word = before_word.strip.empty?
-  first_word = buffer.strip.split(/\s+/, 2)[0] || ""
+  first_word    = buffer.strip.split(/\s+/, 2)[0] || ""
 
   comps = tab_completions_for(prefix, first_word, at_first_word)
   return [buffer, cursor, nil, 0, false] if comps.empty?
 
   if comps.size == 1
     new_word = comps.first
-    buffer = buffer[0...wstart] + new_word + buffer[cursor..-1].to_s
-    cursor = wstart + new_word.length
+    buffer   = buffer[0...wstart] + new_word + buffer[cursor..-1].to_s
+    cursor   = wstart + new_word.length
     return [buffer, cursor, nil, 0, true]
   end
 
@@ -725,25 +884,25 @@ def handle_tab_completion(prompt_str, buffer, cursor, last_tab_prefix, tab_cycle
       STDOUT.print("\a")
     end
     last_tab_prefix = prefix
-    tab_cycle = 1
+    tab_cycle       = 1
     return [buffer, cursor, last_tab_prefix, tab_cycle, false]
   else
-    # Second tab on same prefix: show list (after erasing ghost on current line)
+    # Second tab on same prefix: show list
     render_line(prompt_str, buffer, cursor, false)
     print_tab_list(comps)
     last_tab_prefix = prefix
-    tab_cycle += 1
+    tab_cycle      += 1
     return [buffer, cursor, last_tab_prefix, tab_cycle, true]
   end
 end
 
 def read_line_with_ghost(prompt_str)
-  buffer = ""
-  cursor = 0
-  hist_index = HISTORY.length
+  buffer                 = ""
+  cursor                 = 0
+  hist_index             = HISTORY.length
   saved_line_for_history = ""
-  last_tab_prefix = nil
-  tab_cycle = 0
+  last_tab_prefix        = nil
+  tab_cycle              = 0
 
   render_line(prompt_str, buffer, cursor)
 
@@ -782,10 +941,13 @@ def read_line_with_ghost(prompt_str)
           cursor -= 1
         end
         last_tab_prefix = nil
-        tab_cycle = 0
+        tab_cycle       = 0
       when "\t" # Tab completion
-        buffer, cursor, last_tab_prefix, tab_cycle, _printed =
+        buffer, cursor, last_tab_prefix, tab_cycle, printed =
           handle_tab_completion(prompt_str, buffer, cursor, last_tab_prefix, tab_cycle)
+        # After showing completion list, reset render rows so the next prompt
+        # redraw only clears the current input line, not the completion block.
+        $last_render_rows = 1 if printed
       when "\e" # Escape sequences (arrows, home/end)
         seq1 = io.getch
         seq2 = io.getch
@@ -797,18 +959,18 @@ def read_line_with_ghost(prompt_str)
             end
             if hist_index > 0
               hist_index -= 1
-              buffer = HISTORY[hist_index] || ""
-              cursor = buffer.length
+              buffer      = HISTORY[hist_index] || ""
+              cursor      = buffer.length
             end
           when "B" # Down
             if hist_index < HISTORY.length - 1
               hist_index += 1
-              buffer = HISTORY[hist_index] || ""
-              cursor = buffer.length
+              buffer      = HISTORY[hist_index] || ""
+              cursor      = buffer.length
             elsif hist_index == HISTORY.length - 1
               hist_index = HISTORY.length
-              buffer = saved_line_for_history || ""
-              cursor = buffer.length
+              buffer     = saved_line_for_history || ""
+              cursor     = buffer.length
             end
           when "C" # Right
             if cursor < buffer.length
@@ -829,14 +991,14 @@ def read_line_with_ghost(prompt_str)
           end
         end
         last_tab_prefix = nil
-        tab_cycle = 0
+        tab_cycle       = 0
       else
         if ch.ord >= 32 && ch.ord != 127
           buffer.insert(cursor, ch)
           cursor += 1
-          hist_index = HISTORY.length
+          hist_index      = HISTORY.length
           last_tab_prefix = nil
-          tab_cycle = 0
+          tab_cycle       = 0
         end
       end
 
@@ -876,7 +1038,9 @@ loop do
   input = input.strip
   next if input.empty?
 
+
   HISTORY << input
+
 
   run_input_line(input)
 end
