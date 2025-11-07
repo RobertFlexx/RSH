@@ -7,7 +7,7 @@ require 'rbconfig'
 require 'io/console'
 
 # ---------------- Version ----------------
-SRSH_VERSION = "0.6.0"
+SRSH_VERSION = "0.7.0"
 
 $0 = "srsh-#{SRSH_VERSION}"
 ENV['SHELL'] = "srsh-#{SRSH_VERSION}"
@@ -19,12 +19,17 @@ $child_pids       = []
 $aliases          = {}
 $last_render_rows = 0
 
+$last_status      = 0
+$rsh_functions    = {}
+$rsh_positional   = {}
+$rsh_script_mode  = false
+
 Signal.trap("INT", "IGNORE")
 
 # ---------------- History ----------------
 HISTORY_FILE = File.join(Dir.home, ".srsh_history")
 HISTORY = if File.exist?(HISTORY_FILE)
-  File.readlines(HISTORY_FILE, chomp: true)
+File.readlines(HISTORY_FILE, chomp: true)
 else
   []
 end
@@ -42,12 +47,12 @@ end
 RC_FILE = File.join(Dir.home, ".srshrc")
 begin
   unless File.exist?(RC_FILE)
-    File.write(RC_FILE, <<~RC)
-      # ~/.srshrc — srsh configuration
-      # This file was created automatically by srsh v#{SRSH_VERSION}.
-      # You can keep personal notes or planned settings here.
-      # (Currently not sourced by srsh runtime.)
-    RC
+  File.write(RC_FILE, <<~RC)
+  # ~/.srshrc — srsh configuration
+  # This file was created automatically by srsh v#{SRSH_VERSION}.
+  # You can keep personal notes or planned settings here.
+  # (Currently not sourced by srsh runtime.)
+  RC
   end
 rescue
 end
@@ -65,8 +70,15 @@ def rainbow_codes
   [31, 33, 32, 36, 34, 35, 91, 93, 92, 96, 94, 95]
 end
 
+# variable expansion: $VAR and $1, $2, $0 (script/function args)
 def expand_vars(str)
-  str.gsub(/\$([a-zA-Z_][a-zA-Z0-9_]*)/) { ENV[$1] || "" }
+  s = str.gsub(/\$([a-zA-Z_][a-zA-Z0-9_]*)/) do
+    ENV[$1] || ""
+  end
+  s.gsub(/\$(\d+)/) do
+    idx = $1.to_i
+    ($rsh_positional && $rsh_positional[idx]) || ""
+  end
 end
 
 def parse_redirection(cmd)
@@ -118,156 +130,156 @@ end
 
 def strip_ansi(str)
   str.to_s.gsub(/\e\[[0-9;]*m/, '')
-end
+                     end
 
-# ---------------- Aliases ----------------
-def expand_aliases(cmd, seen = [])
-  return cmd if cmd.nil? || cmd.strip.empty?
-  first_word, rest = cmd.strip.split(' ', 2)
-  return cmd if seen.include?(first_word)
-  seen << first_word
+                    # ---------------- Aliases ----------------
+                    def expand_aliases(cmd, seen = [])
+                    return cmd if cmd.nil? || cmd.strip.empty?
+                    first_word, rest = cmd.strip.split(' ', 2)
+                    return cmd if seen.include?(first_word)
+                    seen << first_word
 
-  if $aliases.key?(first_word)
-    replacement = $aliases[first_word]
-    expanded    = expand_aliases(replacement, seen)
-    rest ? "#{expanded} #{rest}" : expanded
-  else
-    cmd
-  end
-end
+                    if $aliases.key?(first_word)
+                    replacement = $aliases[first_word]
+                    expanded    = expand_aliases(replacement, seen)
+                    rest ? "#{expanded} #{rest}" : expanded
+                    else
+                    cmd
+                    end
+                    end
 
-# ---------------- System Info ----------------
-def current_time
-  Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")
-end
+                    # ---------------- System Info ----------------
+                    def current_time
+                    Time.now.strftime("%Y-%m-%d %H:%M:%S %Z")
+                    end
 
-def detect_distro
-  if File.exist?('/etc/os-release')
-    line = File.read('/etc/os-release').lines.find { |l|
-      l.start_with?('PRETTY_NAME="') || l.start_with?('PRETTY_NAME=')
-    }
-    return line.split('=').last.strip.delete('"') if line
-  end
-  "#{RbConfig::CONFIG['host_os']}"
-end
+                    def detect_distro
+                    if File.exist?('/etc/os-release')
+                    line = File.read('/etc/os-release').lines.find { |l|
+                                                                     l.start_with?('PRETTY_NAME="') || l.start_with?('PRETTY_NAME=')
+                                                                   }
+                    return line.split('=').last.strip.delete('"') if line
+                    end
+                    "#{RbConfig::CONFIG['host_os']}"
+                    end
 
-def os_type
-  host = RbConfig::CONFIG['host_os'].to_s
-  case host
-  when /linux/i
-    :linux
-  when /darwin/i
-    :mac
-  when /bsd/i
-    :bsd
-  else
-    :other
-  end
-end
+                    def os_type
+                    host = RbConfig::CONFIG['host_os'].to_s
+                    case host
+                    when /linux/i
+                    :linux
+                    when /darwin/i
+                    :mac
+                    when /bsd/i
+                    :bsd
+                    else
+                    :other
+                    end
+                    end
 
-# ---------------- Quotes ----------------
-QUOTES = [
-  "Keep calm and code on.",
-  "Did you try turning it off and on again?",
-  "There’s no place like 127.0.0.1.",
-  "To iterate is human, to recurse divine.",
-  "sudo rm -rf / – Just kidding, don’t do that!",
-  "The shell is mightier than the sword.",
-  "A journey of a thousand commits begins with a single push.",
-  "In case of fire: git commit, git push, leave building.",
-  "Debugging is like being the detective in a crime movie where you are also the murderer.",
-  "Unix is user-friendly. It's just selective about who its friends are.",
-  "Old sysadmins never die, they just become daemons.",
-  "Listen you flatpaker! – Totally Terry Davis",
-  "How is #{detect_distro}? 🤔",
-  "Life is short, but your command history is eternal.",
-  "If at first you don’t succeed, git commit and push anyway.",
-  "rm -rf: the ultimate trust exercise.",
-  "Coding is like magic, but with more coffee.",
-  "There’s no bug, only undocumented features.",
-  "Keep your friends close and your aliases closer.",
-  "Why wait for the future when you can Ctrl+Z it?",
-  "A watched process never completes.",
-  "When in doubt, make it a function.",
-  "Some call it procrastination, we call it debugging curiosity.",
-  "Life is like a terminal; some commands just don’t execute.",
-  "Good code is like a good joke; it needs no explanation.",
-  "sudo: because sometimes responsibility is overrated.",
-  "Pipes make the world go round.",
-  "In bash we trust, in Ruby we wonder.",
-  "A system without errors is like a day without coffee.",
-  "Keep your loops tight and your sleeps short.",
-  "Stack traces are just life giving you directions.",
-  "Your mom called, she wants her semicolons back."
-]
+                    # ---------------- Quotes ----------------
+                    QUOTES = [
+                              "Keep calm and code on.",
+                              "Did you try turning it off and on again?",
+                              "There’s no place like 127.0.0.1.",
+                              "To iterate is human, to recurse divine.",
+                              "sudo rm -rf / – Just kidding, don’t do that!",
+                              "The shell is mightier than the sword.",
+                              "A journey of a thousand commits begins with a single push.",
+                              "In case of fire: git commit, git push, leave building.",
+                              "Debugging is like being the detective in a crime movie where you are also the murderer.",
+                              "Unix is user-friendly. It's just selective about who its friends are.",
+                              "Old sysadmins never die, they just become daemons.",
+                              "Listen you flatpaker! – Totally Terry Davis",
+                              "How is #{detect_distro}? 🤔",
+                              "Life is short, but your command history is eternal.",
+                              "If at first you don’t succeed, git commit and push anyway.",
+                              "rm -rf: the ultimate trust exercise.",
+                              "Coding is like magic, but with more coffee.",
+                              "There’s no bug, only undocumented features.",
+                              "Keep your friends close and your aliases closer.",
+                              "Why wait for the future when you can Ctrl+Z it?",
+                              "A watched process never completes.",
+                              "When in doubt, make it a function.",
+                              "Some call it procrastination, we call it debugging curiosity.",
+                              "Life is like a terminal; some commands just don’t execute.",
+                              "Good code is like a good joke; it needs no explanation.",
+                              "sudo: because sometimes responsibility is overrated.",
+                              "Pipes make the world go round.",
+                              "In bash we trust, in Ruby we wonder.",
+                              "A system without errors is like a day without coffee.",
+                              "Keep your loops tight and your sleeps short.",
+                              "Stack traces are just life giving you directions.",
+                              "Your mom called, she wants her semicolons back."
+                             ]
 
-$current_quote = QUOTES.sample
+                    $current_quote = QUOTES.sample
 
-def dynamic_quote
-  chars   = $current_quote.chars
-  rainbow = rainbow_codes.cycle
-  chars.map { |c| color(c, rainbow.next) }.join
-end
+                    def dynamic_quote
+                    chars   = $current_quote.chars
+                    rainbow = rainbow_codes.cycle
+                    chars.map { |c| color(c, rainbow.next) }.join
+                    end
 
-# ---------------- CPU / RAM / Storage ----------------
-def read_cpu_times
-  return [] unless File.exist?('/proc/stat')
-  cpu_line = File.readlines('/proc/stat').find { |line| line.start_with?('cpu ') }
-  return [] unless cpu_line
-  cpu_line.split[1..-1].map(&:to_i)
-end
+                    # ---------------- CPU / RAM / Storage ----------------
+                    def read_cpu_times
+                    return [] unless File.exist?('/proc/stat')
+                    cpu_line = File.readlines('/proc/stat').find { |line| line.start_with?('cpu ') }
+                    return [] unless cpu_line
+                    cpu_line.split[1..-1].map(&:to_i)
+                    end
 
-def calculate_cpu_usage(prev, current)
-  return 0.0 if prev.empty? || current.empty?
-  prev_idle     = prev[3] + (prev[4] || 0)
-  idle          = current[3] + (current[4] || 0)
-  prev_non_idle = prev[0] + prev[1] + prev[2] +
-                  (prev[5] || 0) + (prev[6] || 0) + (prev[7] || 0)
-  non_idle      = current[0] + current[1] + current[2] +
-                  (current[5] || 0) + (current[6] || 0) + (current[7] || 0)
-  prev_total = prev_idle + prev_non_idle
-  total      = idle + non_idle
-  totald     = total - prev_total
-  idled      = idle - prev_idle
-  return 0.0 if totald <= 0
-  ((totald - idled).to_f / totald) * 100
-end
+                    def calculate_cpu_usage(prev, current)
+                    return 0.0 if prev.empty? || current.empty?
+                    prev_idle     = prev[3] + (prev[4] || 0)
+                    idle          = current[3] + (current[4] || 0)
+                    prev_non_idle = prev[0] + prev[1] + prev[2] +
+                    (prev[5] || 0) + (prev[6] || 0) + (prev[7] || 0)
+                    non_idle      = current[0] + current[1] + current[2] +
+                    (current[5] || 0) + (current[6] || 0) + (current[7] || 0)
+                    prev_total = prev_idle + prev_non_idle
+                    total      = idle + non_idle
+                    totald     = total - prev_total
+                    idled      = idle - prev_idle
+                    return 0.0 if totald <= 0
+                    ((totald - idled).to_f / totald) * 100
+                    end
 
-def cpu_cores_and_freq
-  return [0, []] unless File.exist?('/proc/cpuinfo')
-  cores = 0
-  freqs = []
-  File.foreach('/proc/cpuinfo') do |line|
-    cores += 1 if line =~ /^processor\s*:\s*\d+/
-    if line =~ /^cpu MHz\s*:\s*([\d.]+)/
-      freqs << $1.to_f
-    end
-  end
-  [cores, freqs.first(cores)]
-end
+                    def cpu_cores_and_freq
+                    return [0, []] unless File.exist?('/proc/cpuinfo')
+                    cores = 0
+                    freqs = []
+                    File.foreach('/proc/cpuinfo') do |line|
+                    cores += 1 if line =~ /^processor\s*:\s*\d+/
+                    if line =~ /^cpu MHz\s*:\s*([\d.]+)/
+                    freqs << $1.to_f
+                    end
+                    end
+                    [cores, freqs.first(cores)]
+                    end
 
-def cpu_info
-  usage        = 0.0
-  cores        = 0
-  freq_display = "N/A"
+                    def cpu_info
+                    usage        = 0.0
+                    cores        = 0
+                    freq_display = "N/A"
 
-  case os_type
-  when :linux
-    prev    = read_cpu_times
-    sleep 0.05
-    current = read_cpu_times
-    usage   = calculate_cpu_usage(prev, current).round(1)
-    cores, freqs = cpu_cores_and_freq
-    freq_display = freqs.empty? ? "N/A" : freqs.map { |f| "#{f.round(0)}MHz" }.join(', ')
-  else
-    cores = begin
-      `sysctl -n hw.ncpu 2>/dev/null`.to_i
-    rescue
-      0
-    end
+                    case os_type
+                    when :linux
+                    prev    = read_cpu_times
+                    sleep 0.05
+                    current = read_cpu_times
+                    usage   = calculate_cpu_usage(prev, current).round(1)
+                    cores, freqs = cpu_cores_and_freq
+                    freq_display = freqs.empty? ? "N/A" : freqs.map { |f| "#{f.round(0)}MHz" }.join(', ')
+                    else
+                    cores = begin
+                    `sysctl -n hw.ncpu 2>/dev/null`.to_i
+                    rescue
+                    0
+                    end
 
-    raw_freq_hz = begin
-      `sysctl -n hw.cpufrequency 2>/dev/null`.to_i
+                    raw_freq_hz = begin
+                    `sysctl -n hw.cpufrequency 2>/dev/null`.to_i
     rescue
       0
     end
@@ -382,6 +394,7 @@ def builtin_help
   puts color(sprintf("%-15s", "systemfetch"), "1;36") + "Display system information"
   puts color(sprintf("%-15s", "hist"), "1;36")        + "Show shell history"
   puts color(sprintf("%-15s", "clearhist"), "1;36")   + "Clear saved history (memory + file)"
+  puts color(sprintf("%-15s", "put"), "1;36")         + "Print text (like echo)"
   puts color(sprintf("%-15s", "help"), "1;36")        + "Show this help message"
   puts color('=' * 60, "1;35")
 end
@@ -560,6 +573,147 @@ def builtin_ls(path = ".")
   print_columns_colored(labels)
 end
 
+# ---------------- rsh scripting helpers ----------------
+
+# Evaluate rsh condition expressions, Ruby-style with $VARS
+def eval_rsh_expr(expr)
+  return false if expr.nil? || expr.strip.empty?
+  s = expr.to_s
+
+  s = s.gsub(/\$([A-Za-z_][A-Za-z0-9_]*)/) do
+    (ENV[$1] || "").inspect
+  end
+
+  s = s.gsub(/\$(\d+)/) do
+    idx = $1.to_i
+    val = ($rsh_positional && $rsh_positional[idx]) || ""
+    val.inspect
+  end
+
+  begin
+    !!eval(s)
+  rescue
+    false
+  end
+end
+
+def rsh_find_if_bounds(lines, start_idx)
+  depth    = 1
+  else_idx = nil
+  i        = start_idx + 1
+  while i < lines.length
+    line = lines[i].to_s.strip
+    if line.start_with?("if ")
+      depth += 1
+    elsif line.start_with?("while ")
+      depth += 1
+    elsif line.start_with?("fn ")
+      depth += 1
+    elsif line == "end"
+      depth -= 1
+      return [else_idx, i] if depth == 0
+    elsif line == "else" && depth == 1
+      else_idx = i
+    end
+    i += 1
+  end
+  raise "Unmatched 'if' in rsh script"
+end
+
+def rsh_find_block_end(lines, start_idx)
+  depth = 1
+  i     = start_idx + 1
+  while i < lines.length
+    line = lines[i].to_s.strip
+    if line.start_with?("if ") || line.start_with?("while ") || line.start_with?("fn ")
+      depth += 1
+    elsif line == "end"
+      depth -= 1
+      return i if depth == 0
+    end
+    i += 1
+  end
+  raise "Unmatched block in rsh script"
+end
+
+def run_rsh_block(lines, start_idx, end_idx)
+  i = start_idx
+  while i < end_idx
+    raw  = lines[i]
+    i   += 1
+    next if raw.nil?
+    line = raw.strip
+    next if line.empty? || line.start_with?("#")
+
+    if line.start_with?("if ")
+      cond_expr           = line[3..-1].strip
+      else_idx, end_idx_2 = rsh_find_if_bounds(lines, i - 1)
+      if eval_rsh_expr(cond_expr)
+        body_end = else_idx || end_idx_2
+        run_rsh_block(lines, i, body_end)
+      elsif else_idx
+        run_rsh_block(lines, else_idx + 1, end_idx_2)
+      end
+      i = end_idx_2 + 1
+      next
+    elsif line.start_with?("while ")
+      cond_expr = line[6..-1].strip
+      block_end = rsh_find_block_end(lines, i - 1)
+      while eval_rsh_expr(cond_expr)
+        run_rsh_block(lines, i, block_end)
+      end
+      i = block_end + 1
+      next
+    elsif line.start_with?("fn ")
+      parts     = line.split
+      name      = parts[1]
+      argnames  = parts[2..-1] || []
+      block_end = rsh_find_block_end(lines, i - 1)
+      $rsh_functions[name] = {
+        args: argnames,
+        body: lines[i...block_end]
+      }
+      i = block_end + 1
+      next
+    else
+      run_input_line(line)
+    end
+  end
+end
+
+def rsh_run_script(script_path, argv)
+  $rsh_script_mode = true
+  $rsh_positional  = {}
+  $rsh_positional[0] = File.basename(script_path)
+  argv.each_with_index do |val, idx|
+    $rsh_positional[idx + 1] = val
+  end
+
+  lines = File.readlines(script_path, chomp: true)
+  if lines[0] && lines[0].start_with?("#!")
+    lines = lines[1..-1] || []
+  end
+  run_rsh_block(lines, 0, lines.length)
+end
+
+def rsh_call_function(name, argv)
+  fn = $rsh_functions[name]
+  return unless fn
+
+  saved_positional = $rsh_positional
+  $rsh_positional  = {}
+  $rsh_positional[0] = name
+  fn[:args].each_with_index do |argname, idx|
+    val = argv[idx] || ""
+    ENV[argname] = val
+    $rsh_positional[idx + 1] = val
+  end
+
+  run_rsh_block(fn[:body], 0, fn[:body].length)
+ensure
+  $rsh_positional = saved_positional
+end
+
 # ---------------- External Execution Helper ----------------
 def exec_external(args, stdin_file, stdout_file, append)
   command_path = args[0]
@@ -601,6 +755,7 @@ def exec_external(args, stdin_file, stdout_file, append)
   $child_pids << pid
   begin
     Process.wait(pid)
+    $last_status = $?.exitstatus || 0
   rescue Interrupt
   ensure
     $child_pids.delete(pid)
@@ -615,6 +770,12 @@ def run_command(cmd)
   cmd, stdin_file, stdout_file, append = parse_redirection(cmd)
   args = Shellwords.shellsplit(cmd) rescue []
   return if args.empty?
+
+  # rsh functions
+  if $rsh_functions.key?(args[0])
+    rsh_call_function(args[0], args[1..-1] || [])
+    return
+  end
 
   case args[0]
   when 'ls'
@@ -676,6 +837,10 @@ def run_command(cmd)
     return
   when 'clearhist'
     builtin_clearhist
+    return
+  when 'put'
+    msg = args[1..-1].join(' ')
+    puts msg
     return
   end
 
@@ -935,6 +1100,10 @@ def read_line_with_ghost(prompt_str)
         else
           # ignore when line not empty
         end
+      when "\u0001" # Ctrl-A - move to beginning of line
+        cursor = 0
+        last_tab_prefix = nil
+        tab_cycle       = 0
       when "\u007F", "\b" # Backspace
         if cursor > 0
           buffer.slice!(cursor - 1)
@@ -1022,6 +1191,17 @@ def print_welcome
   puts
 end
 
+# ---------------- Script vs interactive entry ----------------
+if ARGV[0]
+  script_path = ARGV.shift
+  begin
+    rsh_run_script(script_path, ARGV)
+  rescue => e
+    STDERR.puts "rsh script error: #{e.class}: #{e.message}"
+  end
+  exit 0
+end
+
 print_welcome
 
 # ---------------- Main Loop ----------------
@@ -1038,9 +1218,7 @@ loop do
   input = input.strip
   next if input.empty?
 
-
   HISTORY << input
-
 
   run_input_line(input)
 end
