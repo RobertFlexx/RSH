@@ -9,7 +9,7 @@ The code itself is written by RobertFlexx, but the comments are written by ChatG
 ## Known Issues:
 
 * Flatpak chaining with 'and' doesn't work.
-* Running Shell Scripts might not always work. Sometimes it works, other times not so much.
+* Running Shell Scripts might not always work. Sometimes it works, other times not so much. (can run native "RSH" scripts now. (must include shebang ***"#!/usr/bin/env srsh"***
 
 ## Please Consult:
 
