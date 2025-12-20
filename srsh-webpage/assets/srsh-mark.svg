@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="srsh">
+  <rect x="10" y="18" width="108" height="92" rx="16" fill="#0c0f14"/>
+  <rect x="16" y="26" width="96" height="16" rx="8" fill="#141824"/>
+  <circle cx="28" cy="34" r="5" fill="#ff5f57"/>
+  <circle cx="44" cy="34" r="5" fill="#febc2e"/>
+  <circle cx="60" cy="34" r="5" fill="#28c840"/>
+  <path d="M28 60L44 68L28 76" stroke="#e6edf3" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M54 78H86" stroke="#e6edf3" stroke-width="7" stroke-linecap="round"/>
+  <path d="M54 60H92" stroke="#7ee787" stroke-width="7" stroke-linecap="round" opacity="0.9"/>
+  <text x="64" y="106" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace" font-size="14" fill="#9aa4b2">srsh</text>
+</svg>

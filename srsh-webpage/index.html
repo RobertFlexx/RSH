@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>srsh - a tiny Ruby shell with RSH scripting</title>
+  <meta name="description" content="srsh is a simple Ruby-powered shell with a distinct, safe-ish scripting language called RSH.">
+  <link rel="icon" href="assets/srsh-mark.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/app.js" defer></script>
+</head>
+
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="topbar" role="banner">
+    <div class="wrap topbar__row">
+      <a class="brand" href="#/">
+        <img class="brand__mark" src="assets/srsh-mark.svg" alt="" aria-hidden="true">
+        <span class="brand__name">srsh</span>
+        <span class="brand__tag">Ruby shell • RSH scripts</span>
+      </a>
+
+      <nav class="nav" aria-label="Primary">
+        <a class="nav__link" href="#/">Home</a>
+        <a class="nav__link" href="#/docs">Docs</a>
+        <a class="nav__link" href="#/download">Download</a>
+        <a class="nav__link" href="#/about">About</a>
+        <a class="nav__link" href="#/ruby">Ruby</a>
+        <a class="nav__link" href="#/github">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="wrap" role="main">
+    <!-- HOME -->
+    <section class="page page--home" data-page="home">
+      <div class="hero">
+        <div class="hero__left">
+          <h1 class="hero__title">
+            srsh
+            <span class="hero__subtitle">a small shell with a weird little scripting language</span>
+          </h1>
+
+          <p class="hero__blurb">
+            srsh is a Ruby-powered interactive shell with <strong>RSH</strong> scripting: familiar-ish keywords,
+            not Ruby eval, and a focus on staying simple. It’s not trying to replace your real shell, it’s trying
+            to be fun and usable.
+          </p>
+
+          <form class="search" data-search-form>
+            <label class="search__label" for="q">Search docs</label>
+            <div class="search__row">
+              <input id="q" name="q" class="search__input" type="search" autocomplete="off"
+                     placeholder="try: while, scheme, plugins, $?, emit, times">
+              <button class="btn btn--primary" type="submit">Search</button>
+            </div>
+            <p class="search__hint">
+              Tip: you can also jump pages with <code>#/docs</code>, <code>#/download</code>, etc.
+            </p>
+          </form>
+
+          <div class="hero__cta">
+            <a class="btn" href="#/download">Get srsh</a>
+            <a class="btn btn--ghost" href="#/docs">Read the docs</a>
+          </div>
+        </div>
+
+        <div class="hero__right">
+          <div class="card card--terminal" aria-label="srsh preview">
+            <div class="terminal">
+              <div class="terminal__bar">
+                <span class="dot dot--r"></span>
+                <span class="dot dot--y"></span>
+                <span class="dot dot--g"></span>
+                <span class="terminal__title">srsh</span>
+              </div>
+              <pre class="terminal__body"><code>$ srsh
+Welcome to srsh 0.8.0
+/home/user &gt; scheme ocean
+scheme: now using 'ocean'
+/home/user &gt; emit "FPS: " .. rand(300)
+FPS: 219
+/home/user &gt; </code></pre>
+            </div>
+          </div>
+
+          <div class="mini">
+            <div class="mini__item">
+              <div class="mini__k">Gem</div>
+              <div class="mini__v"><code>gem install srsh</code></div>
+            </div>
+            <div class="mini__item">
+              <div class="mini__k">RSH</div>
+              <div class="mini__v">if / while / fn / times</div>
+            </div>
+            <div class="mini__item">
+              <div class="mini__k">Mods</div>
+              <div class="mini__v"><code>~/.srsh/plugins</code></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <article class="card">
+          <h2 class="card__title">Why srsh exists</h2>
+          <p class="card__text">
+            For people who like tinkering with shells, themes, plugins, and little languages without needing to
+            write C or fight your system shell config.
+          </p>
+          <p class="card__text">
+            It’s also a nice playground for RSH: a purposely-limited expression engine and script runner.
+          </p>
+          <a class="card__link" href="#/about">Read the story →</a>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title">RSH at a glance</h2>
+          <ul class="list">
+            <li><code>emit</code> prints expression results</li>
+            <li><code>$NAME</code>, <code>$1</code>, <code>$?</code> expansion</li>
+            <li><code>times 10</code> loops with <code>it</code></li>
+            <li><code>fn name args...</code> defines functions</li>
+          </ul>
+          <a class="card__link" href="#/docs">See examples →</a>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title">Themes & plugins</h2>
+          <p class="card__text">
+            Drop <code>.theme</code> / <code>.json</code> themes into <code>~/.srsh/themes</code>.
+            Drop <code>.rsh</code> or <code>.rb</code> into <code>~/.srsh/plugins</code>.
+          </p>
+          <a class="card__link" href="#/docs#themes">Theme docs →</a>
+        </article>
+      </div>
+
+      <footer class="foot">
+        <div class="foot__row">
+          <span>srsh is community-y and evolving.</span>
+          <span class="foot__sep">•</span>
+          <a href="#/github">Contribute on GitHub</a>
+        </div>
+      </footer>
+    </section>
+
+    <!-- DOCS -->
+    <section class="page" data-page="docs">
+      <div class="pagehead">
+        <h1 class="pagehead__title">Documentation</h1>
+        <p class="pagehead__sub">
+          RSH scripting + srsh builtins. No server required. No magic. Just files.
+        </p>
+      </div>
+
+      <div class="layout">
+        <aside class="side" aria-label="Docs navigation">
+          <div class="side__box">
+            <div class="side__title">Docs</div>
+            <a class="side__link" href="#/docs#quickstart">Quickstart</a>
+            <a class="side__link" href="#/docs#rsh">RSH basics</a>
+            <a class="side__link" href="#/docs#expr">Expressions</a>
+            <a class="side__link" href="#/docs#control">Control flow</a>
+            <a class="side__link" href="#/docs#functions">Functions</a>
+            <a class="side__link" href="#/docs#builtins">Builtins</a>
+            <a class="side__link" href="#/docs#themes">Themes</a>
+            <a class="side__link" href="#/docs#plugins">Plugins</a>
+          </div>
+
+          <div class="side__box">
+            <div class="side__title">Jump</div>
+            <a class="side__link" href="#/download">Download</a>
+            <a class="side__link" href="#/about">About srsh</a>
+          </div>
+        </aside>
+
+        <article class="doc">
+          <section id="quickstart" class="doc__section">
+            <h2>Quickstart</h2>
+            <p>Install the gem:</p>
+            <div class="codebox">
+              <pre><code>gem install srsh</code></pre>
+              <button class="copy" data-copy="gem install srsh">Copy</button>
+            </div>
+
+            <p>Run it:</p>
+            <div class="codebox">
+              <pre><code>srsh</code></pre>
+              <button class="copy" data-copy="srsh">Copy</button>
+            </div>
+
+            <p>Change theme:</p>
+            <div class="codebox">
+              <pre><code>scheme --list
+scheme ocean</code></pre>
+              <button class="copy" data-copy="scheme --list&#10;scheme ocean">Copy</button>
+            </div>
+          </section>
+
+          <section id="rsh" class="doc__section">
+            <h2>RSH basics</h2>
+            <p>
+              RSH scripts are plain text files. srsh reads them, strips comments (<code>#</code> outside quotes),
+              parses blocks, and runs commands line-by-line.
+            </p>
+
+            <p>A tiny script:</p>
+            <div class="codebox">
+              <pre><code># hello.rsh
+put "hello"
+NAME = "world"
+emit "hello, " .. $NAME</code></pre>
+              <button class="copy" data-copy="# hello.rsh&#10;put &quot;hello&quot;&#10;NAME = &quot;world&quot;&#10;emit &quot;hello, &quot; .. $NAME">Copy</button>
+            </div>
+          </section>
+
+          <section id="expr" class="doc__section">
+            <h2>Expressions</h2>
+            <p>Expressions are parsed by the RSH lexer/parser, not Ruby. Basic operators:</p>
+
+            <ul class="list">
+              <li>math: <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code></li>
+              <li>compare: <code>==</code> <code>!=</code> <code>&lt;</code> <code>&lt;=</code> <code>&gt;</code> <code>&gt;=</code></li>
+              <li>logic: <code>and</code> / <code>or</code> / <code>not</code> (also <code>&amp;&amp;</code>, <code>||</code>, <code>!</code>)</li>
+              <li>concat: <code>..</code> (string-ish join)</li>
+            </ul>
+
+            <p>Functions you can call in expressions:</p>
+            <div class="codebox">
+              <pre><code>emit len("abc")
+emit contains("srsh", "rsh")
+emit rand(10)
+emit pick("sand", "water", "lava")</code></pre>
+              <button class="copy" data-copy="emit len(&quot;abc&quot;)&#10;emit contains(&quot;srsh&quot;, &quot;rsh&quot;)&#10;emit rand(10)&#10;emit pick(&quot;sand&quot;, &quot;water&quot;, &quot;lava&quot;)">Copy</button>
+            </div>
+          </section>
+
+          <section id="control" class="doc__section">
+            <h2>Control flow</h2>
+            <p>Blocks end with <code>end</code>. It’s intentionally old-school.</p>
+
+            <div class="codebox">
+              <pre><code>if $USER == "user"
+  put "wsg gng"
+else
+  put "hello"
+end
+
+times 5
+  emit "it=" .. $it
+end
+
+i = 0
+while $i &lt; 3
+  put "looping"
+  i = $i + 1
+end</code></pre>
+              <button class="copy" data-copy="if $USER == &quot;user&quot;&#10;  put &quot;wsg gng&quot;&#10;else&#10;  put &quot;hello&quot;&#10;end&#10;&#10;times 5&#10;  emit &quot;it=&quot; .. $it&#10;end&#10;&#10;i = 0&#10;while $i &lt; 3&#10;  put &quot;looping&quot;&#10;  i = $i + 1&#10;end">Copy</button>
+            </div>
+          </section>
+
+          <section id="functions" class="doc__section">
+            <h2>Functions</h2>
+            <p>
+              RSH functions are defined with <code>fn</code>. Arguments become ENV variables inside the function.
+            </p>
+
+            <div class="codebox">
+              <pre><code>fn greet who
+  emit "hello " .. $who
+end
+
+greet "world"</code></pre>
+              <button class="copy" data-copy="fn greet who&#10;  emit &quot;hello &quot; .. $who&#10;end&#10;&#10;greet &quot;world&quot;">Copy</button>
+            </div>
+          </section>
+
+          <section id="builtins" class="doc__section">
+            <h2>Builtins</h2>
+            <p>Some useful commands:</p>
+
+            <div class="table">
+              <div class="row"><div class="cell k"><code>help</code></div><div class="cell v">Show builtins and RSH blocks</div></div>
+              <div class="row"><div class="cell k"><code>scheme --list</code></div><div class="cell v">List themes</div></div>
+              <div class="row"><div class="cell k"><code>scheme ocean</code></div><div class="cell v">Set theme</div></div>
+              <div class="row"><div class="cell k"><code>reload</code></div><div class="cell v">Reload ~/.srshrc and plugins</div></div>
+              <div class="row"><div class="cell k"><code>plugins</code></div><div class="cell v">Show loaded plugin files</div></div>
+              <div class="row"><div class="cell k"><code>source file.rsh</code></div><div class="cell v">Run an RSH script</div></div>
+            </div>
+          </section>
+
+          <section id="themes" class="doc__section">
+            <h2>Themes</h2>
+            <p>
+              Themes live in <code>~/.srsh/themes</code>. You can write either a simple <code>.theme</code> file
+              or JSON.
+            </p>
+
+            <div class="codebox">
+              <pre><code># ~/.srsh/themes/my.theme
+ui_border=1;35
+ui_title=1;33
+ui_hdr=1;36
+ui_key=1;36
+ui_val=0;37
+ok=32
+warn=33
+err=31
+dim=90
+prompt_path=33
+prompt_host=36
+prompt_mark=35
+quote_rainbow=true</code></pre>
+            </div>
+
+            <p>Then:</p>
+            <div class="codebox">
+              <pre><code>scheme my</code></pre>
+              <button class="copy" data-copy="scheme my">Copy</button>
+            </div>
+          </section>
+
+          <section id="plugins" class="doc__section">
+            <h2>Plugins</h2>
+            <p>
+              Put <code>.rsh</code> or <code>.rb</code> files in <code>~/.srsh/plugins</code>.
+              RSH plugins run first (safer), Ruby plugins run second (trusted).
+            </p>
+
+            <div class="codebox">
+              <pre><code># ~/.srsh/plugins/hello.rsh
+alias ll='ls'
+put "srsh plugin loaded"</code></pre>
+            </div>
+
+            <p>A tiny Ruby plugin can register a builtin via the SRSH API:</p>
+            <div class="codebox">
+              <pre><code># ~/.srsh/plugins/hi.rb
+SRSH.builtin("hi") do |_args|
+  puts "hi from ruby plugin"
+end</code></pre>
+            </div>
+          </section>
+
+          <div class="doc__end">
+            <p>That’s the basics. If you break it, you get to keep both pieces :D</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD -->
+    <section class="page" data-page="download">
+      <div class="pagehead">
+        <h1 class="pagehead__title">Download</h1>
+        <p class="pagehead__sub">srsh is distributed as a RubyGem.</p>
+      </div>
+
+      <div class="grid grid--2">
+        <article class="card">
+          <h2 class="card__title">Install (recommended)</h2>
+          <div class="codebox">
+            <pre><code>gem install srsh</code></pre>
+            <button class="copy" data-copy="gem install srsh">Copy</button>
+          </div>
+          <p class="card__text">
+            After install, run <code>srsh</code> and you should see the welcome banner.
+          </p>
+          <div class="codebox">
+            <pre><code>srsh</code></pre>
+            <button class="copy" data-copy="srsh">Copy</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title">Update</h2>
+          <div class="codebox">
+            <pre><code>gem update srsh</code></pre>
+            <button class="copy" data-copy="gem update srsh">Copy</button>
+          </div>
+          <p class="card__text">
+            If your PATH points to an older install (like <code>/usr/local/bin</code>), check with:
+          </p>
+          <div class="codebox">
+            <pre><code>which -a srsh</code></pre>
+            <button class="copy" data-copy="which -a srsh">Copy</button>
+          </div>
+        </article>
+      </div>
+
+      <article class="card">
+        <h2 class="card__title">Files & locations</h2>
+        <div class="table">
+          <div class="row"><div class="cell k"><code>~/.srshrc</code></div><div class="cell v">Your rc file (runs at startup)</div></div>
+          <div class="row"><div class="cell k"><code>~/.srsh/themes</code></div><div class="cell v">Themes (<code>.theme</code> or <code>.json</code>)</div></div>
+          <div class="row"><div class="cell k"><code>~/.srsh/plugins</code></div><div class="cell v">Plugins (<code>.rsh</code> or trusted <code>.rb</code>)</div></div>
+          <div class="row"><div class="cell k"><code>~/.srsh_history</code></div><div class="cell v">Shell history</div></div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="page" data-page="about">
+      <div class="pagehead">
+        <h1 class="pagehead__title">About srsh</h1>
+        <p class="pagehead__sub">The goal: small, hackable, and not scary to modify.</p>
+      </div>
+
+      <div class="grid grid--2">
+        <article class="card">
+          <h2 class="card__title">What it is</h2>
+          <p class="card__text">
+            srsh is an interactive shell written in Ruby. It includes a separate scripting language called RSH
+            with its own lexer/parser and an expression evaluator.
+          </p>
+          <p class="card__text">
+            It intentionally avoids Ruby <code>eval</code> in scripts. That keeps RSH predictable and limits
+            “oops I executed a string” moments.
+          </p>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title">What it isn’t</h2>
+          <ul class="list">
+            <li>Not a full POSIX shell replacement</li>
+            <li>Not trying to be bash/zsh/fish</li>
+            <li>Not doing fancy job control yet</li>
+            <li>Not a “secure sandbox” (Ruby plugins are trusted)</li>
+          </ul>
+        </article>
+      </div>
+
+      <article class="card">
+        <h2 class="card__title">Quick feature list</h2>
+        <div class="grid grid--3">
+          <div class="pill">History + ghost text</div>
+          <div class="pill">Tab completion</div>
+          <div class="pill">Themes (<code>scheme</code>)</div>
+          <div class="pill">Plugins</div>
+          <div class="pill">RSH scripts</div>
+          <div class="pill">Systemfetch</div>
+        </div>
+      </article>
+    </section>
+
+    <!-- RUBY -->
+    <section class="page" data-page="ruby">
+      <div class="pagehead">
+        <h1 class="pagehead__title">About Ruby</h1>
+        <p class="pagehead__sub">srsh is built with Ruby - the language is doing the heavy lifting.</p>
+      </div>
+
+      <article class="card">
+        <p class="card__text">
+          Ruby is a general-purpose language with a strong ecosystem (gems), good text handling, and a “make it nice”
+          vibe. srsh uses Ruby for the shell itself, but RSH stays separate so scripts don’t become random Ruby code.
+        </p>
+
+        <p class="card__text">
+          If you want to learn Ruby basics, a good start is the official Ruby docs and RubyGems. (This site is styled
+          <em>like</em> RubyGems on purpose, it’s a nice layout.)
+        </p>
+      </article>
+
+      <article class="card">
+        <h2 class="card__title">Ruby-ish resources</h2>
+        <ul class="list">
+          <li>Ruby language docs</li>
+          <li>RubyGems ecosystem</li>
+          <li>Bundler for managing gem dependencies</li>
+        </ul>
+      </article>
+    </section>
+
+    <!-- GITHUB -->
+    <section class="page" data-page="github">
+      <div class="pagehead">
+        <h1 class="pagehead__title">GitHub</h1>
+        <p class="pagehead__sub">Source code, issues, and PRs live here.</p>
+      </div>
+    <!-- CUM SACK -->
+      <article class="card">
+        <h2 class="card__title">Repository</h2>
+        <p class="card__text">
+          Repo is here:
+          <a href="https://github.com/RobertFlexx/RSH" target="_blank" rel="noreferrer">github.com/RobertFlexx/RSH</a>
+        </p>
+
+        <div class="codebox">
+          <pre><code>https://github.com/RobertFlexx/RSH</code></pre>
+          <button class="copy" data-copy="https://github.com/RobertFlexx/RSH">Copy</button>
+        </div>
+
+        <p class="card__text">
+          Contributions welcome. Keep PRs readable, keep changes small, and please don’t “refactor the universe” in one go.
+        </p>
+      </article>
+    </section>
+
+    <section class="toast" aria-live="polite" aria-atomic="true" hidden>
+      <div class="toast__inner" data-toast>Copied.</div>
+    </section>
+  </main>
+
+  <footer class="sitefoot">
+    <div class="wrap sitefoot__row">
+      <span>srsh • static site • no tracking • no cookies (not even the tasty ones)</span>
+      <span class="sitefoot__sep">•</span>
+      <a href="#/docs">Docs</a>
+      <span class="sitefoot__sep">•</span>
+      <a href="#/download">Download</a>
+    </div>
+  </footer>
+</body>
+</html>
+<!-- sup bruh diawifowhofawhioa
