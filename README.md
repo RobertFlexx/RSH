@@ -257,4 +257,4 @@ source ~/.cshrc
   ```
 
 If anything looks cursed, consult me and/or open an issue :D
-
+(Btw I wrote this markdown on mobile, ik It's ass)
