@@ -1,41 +1,79 @@
-## SRSH IS NOW A GEM! (see installation instructions below)
+## SRSH IS NOW A GEM!
 
-This is version 0.7.1, if things dont work, or work optimally. If you notice anything wrong, please consult me.
-(Fixed Control-C, fixed some bugs, added new features (check via help command)
-THIS IS A BETA RELEASE, IT MAY NOT WORK.
+This is **srsh version 0.8.0**.
 
-The code itself is written by RobertFlexx, but the comments are written by ChatGPT.
+This is a **beta release**. Things may break, behave oddly, or not work at all in some edge cases. If you notice anything weird, please open an issue.
 
-## Known Issues:
+Recent changes:
 
-* Flatpak chaining with 'and' doesn't work.
-* Running Shell Scripts might not always work. Sometimes it works, other times not so much. (can run native "RSH" scripts now. (must include shebang ***"#!/usr/bin/env srsh"***
+* Fixed Control-C handling
+* Fixed several bugs
+* Added new features (see the `help` command for details)
 
-## Please Consult:
+The core code is written by **RobertFlexx**. Comments were written with help from ChatGPT.
 
-* if you have any issues with this SRSh version, please post an issue.
+---
 
-## How to Install:
+## Webpage
+
+Live preview (renders as a real webpage):
+
+```
+https://raw.githack.com/RobertFlexx/RSH/master/srsh-webpage/index.html
+```
+
+Source file in the repository (shows HTML source on GitHub, this is expected):
+
+```
+https://github.com/RobertFlexx/RSH/blob/master/srsh-webpage/index.html
+```
+
+Note: GitHub READMEs cannot force links to open in a new tab. Use middle-click or right-click if you want it opened separately.
+
+---
+
+## Known Issues
+
+* Flatpak chaining with `and` does not work.
+* Running shell scripts is inconsistent. Sometimes it works, sometimes it does not.
+* Native RSH scripts work correctly when using this shebang:
+
+  ```
+  #!/usr/bin/env srsh
+  ```
+
+---
+
+## Support
+
+If you run into issues, please open an issue here:
+
+```
+https://github.com/RobertFlexx/RSH/issues
+```
+
+---
+
+## Installation (Recommended: RubyGem)
+
 ```console
 gem install srsh
 ```
-## Then youre done! enjoy!
 
-### Clone the repository (How to install classic way)
+That’s it. You can now run:
+
+```console
+srsh
+```
+
+---
+
+## Classic Installation (Clone the Repository)
 
 ```console
 git clone https://github.com/RobertFlexx/RSH
-```
-
-### Change the directory to where the Ruby Script is located
-
-```console
 cd RSH
-```
-
-### And finally run it
-
-```console
+chmod +x rsh
 ./rsh
 ```
 
@@ -43,21 +81,21 @@ cd RSH
 
 ## Requirements
 
-* Ruby installed (2.7+ is recommended; newer is better).
-* A POSIX-ish terminal (Linux, *BSD, macOS Terminal, iTerm2, etc).
-* `./rsh` needs the executable bit set:
+* Ruby 2.7 or newer (newer versions are recommended).
+* A POSIX-style terminal (Linux, *BSD, macOS Terminal, iTerm2, etc).
+* The `rsh` file must be executable:
 
-  ```console
-  chmod +x rsh
-  ```
+```console
+chmod +x rsh
+```
 
-If `./rsh` complains or behaves oddly, **run it directly in the repo first** before messing with symlinks or PATH.
+If `./rsh` behaves strangely, always try running it directly from the repository first before adding it to PATH or creating symlinks.
 
 ---
 
 ## Basic Usage
 
-Once you’re in the repo:
+From inside the repository:
 
 ```console
 ./rsh
@@ -65,60 +103,57 @@ Once you’re in the repo:
 
 Inside `srsh` / `rsh` you can:
 
-* Use normal commands (`ls`, `cat`, `grep`, etc.).
-* Use built-ins:
+* Run normal commands (`ls`, `cat`, `grep`, etc).
+* Use built-in commands:
 
-  * `help` – show builtin help with all srsh-specific commands.
-  * `systemfetch` – prints system info with nice bars.
-  * `hist` – view shell history.
-  * `clearhist` – clear history (memory + file).
-  * `alias` / `unalias` – manage aliases.
-* Enjoy:
+  * `help` – show all srsh-specific commands
+  * `systemfetch` – display system information with bars
+  * `hist` – view shell history
+  * `clearhist` – clear history (memory and file)
+  * `alias` / `unalias` – manage aliases
 
-  * **Autosuggestions** (ghost text from history).
-  * **Smart Tab completion**:
+Features:
 
-    * Completes commands, files, dirs.
-    * `cd` → only directories.
-    * `cat` → only files.
+* Autosuggestions (ghost text from history)
+* Smart tab completion:
+
+  * Commands, files, and directories
+  * `cd` completes only directories
+  * `cat` completes only files
 
 ---
 
-## Adding `rsh` / `srsh` to your PATH
+## Adding srsh to Your PATH
 
-So you don’t have to always `cd` into the repo and run `./rsh`, you can either:
+To avoid running `./rsh` every time, you can either add the repository to your PATH or create a symlink.
 
-1. Add the repo directory to your `PATH`, or
-2. Symlink the script into a directory that’s already on your `PATH`.
+Warning: Some systems already have a command named `rsh`. Using `srsh` is safer.
 
-> ⚠️ There is a *system* command called `rsh` on some systems.
-> To avoid conflict, using the name `srsh` for the installed command is usually safer.
+### Option 1: Add Repository to PATH (Linux & macOS)
 
-### Option 1 — Add the repo directory to PATH (Linux & macOS, bash/zsh)
-
-Assuming the repo is at `~/RSH`:
+Assuming the repository is located at `~/RSH`:
 
 ```console
 chmod +x ~/RSH/rsh
 ```
 
-#### For `bash` (Linux, older macOS)
+#### bash
 
-Add this line to `~/.bashrc` (or `~/.bash_profile` on macOS):
+Add to `~/.bashrc` (or `~/.bash_profile` on macOS):
 
 ```bash
 export PATH="$HOME/RSH:$PATH"
 ```
 
-Then reload:
+Reload:
 
 ```console
 source ~/.bashrc
 ```
 
-#### For `zsh` (default on modern macOS)
+#### zsh
 
-Add this line to `~/.zshrc`:
+Add to `~/.zshrc`:
 
 ```zsh
 export PATH="$HOME/RSH:$PATH"
@@ -130,36 +165,32 @@ Reload:
 source ~/.zshrc
 ```
 
-Now you can just run:
+You can now run:
 
 ```console
 rsh
-# or if you prefer to rename it:
+# or rename it to:
 srsh
 ```
 
 ---
 
-### Option 2 — Symlink into `/usr/local/bin` (Linux & macOS)
+### Option 2: Symlink into /usr/local/bin
 
-This keeps your PATH clean and gives you a nice command name.
-
-From the repo directory:
+From inside the repository:
 
 ```console
 chmod +x rsh
 sudo ln -s "$(pwd)/rsh" /usr/local/bin/srsh
 ```
 
-Now you can just type:
+Run from anywhere:
 
 ```console
 srsh
 ```
 
-from anywhere.
-
-If you really, really want to override the system `rsh` (not recommended):
+Overriding the system `rsh` command is possible but not recommended:
 
 ```console
 sudo ln -s "$(pwd)/rsh" /usr/local/bin/rsh
@@ -167,17 +198,15 @@ sudo ln -s "$(pwd)/rsh" /usr/local/bin/rsh
 
 ---
 
-### *BSD: Adding to PATH
+## *BSD Notes
 
-On *BSD, the default shell might be `sh`, `ksh`, `csh`, or `tcsh`. Same idea, different config files.
-
-Assuming repo at `~/RSH`:
+Assuming the repository is at `~/RSH`:
 
 ```console
 chmod +x ~/RSH/rsh
 ```
 
-#### For `sh` / `ksh` / `ash` / `dash` style shells
+### sh / ksh / ash / dash
 
 Add to `~/.profile`:
 
@@ -185,57 +214,47 @@ Add to `~/.profile`:
 export PATH="$HOME/RSH:$PATH"
 ```
 
-Then either log out and back in, or:
+Reload:
 
 ```console
 . ~/.profile
 ```
 
-#### For `csh` / `tcsh`
+### csh / tcsh
 
-Edit `~/.cshrc` (or `~/.tcshrc`) and add:
+Add to `~/.cshrc` or `~/.tcshrc`:
 
 ```csh
 set path = ( $HOME/RSH $path )
 ```
 
-Reload it:
+Reload:
 
 ```console
 source ~/.cshrc
 ```
 
-Now you should be able to run:
-
-```console
-rsh
-# or rename / symlink it as srsh if you want:
-srsh
-```
-
 ---
 
-## Tips / Notes
+## Tips
 
-* If the command **isn’t found** after editing PATH:
+* If the command is not found:
 
-  * Check which shell you’re actually using:
+  * Check your shell:
 
     ```console
     echo $SHELL
     ```
-  * Make sure you edited the correct rc file for that shell.
-  * Print your PATH to confirm:
+  * Confirm your PATH:
 
     ```console
     echo "$PATH"
     ```
-* If things feel off, run it directly from the repo with:
+* If something feels broken, always test with:
 
   ```console
   ./rsh
   ```
 
-  to see if the issue is PATH-related or shell-related.
+If anything looks cursed, consult me and/or open an issue :D
 
-And as i say : if anything looks cursed, **consult me and/or open an issue** :D
