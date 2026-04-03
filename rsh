@@ -1619,11 +1619,18 @@ register_builtin('scheme') { |args| builtin_scheme(args); $last_status ||= 0 }
 register_builtin('plugins') { |args| builtin_plugins; $last_status = 0 }
 register_builtin('reload') { |args| builtin_reload; $last_status ||= 0 }
 
-def run_command(cmd)
+def run_command(cmd, alias_seen = [])
   cmd = cmd.to_s.strip
   return if cmd.empty?
 
-  cmd = expand_aliases(cmd)
+  alias_name = cmd.split(/\s+/, 2).first
+  cmd = expand_aliases(cmd, alias_seen.dup)
+
+  if alias_name && split_commands_ops(cmd).length > 1
+    run_input_line(cmd, alias_seen: (alias_seen + [alias_name]).uniq)
+    return
+  end
+
   cmd = expand_vars(cmd)
 
   run_hooks(:pre_cmd, cmd)
@@ -1922,15 +1929,15 @@ def split_commands_ops(input)
   tokens
 end
 
-def run_input_line(input)
+def run_input_line(input, alias_seen: [])
   split_commands_ops(input).each do |op, cmd|
     case op
     when :seq
-      run_command(cmd)
+      run_command(cmd, alias_seen)
     when :and
-      run_command(cmd) if $last_status == 0
+      run_command(cmd, alias_seen) if $last_status == 0
     when :or
-      run_command(cmd) if $last_status != 0
+      run_command(cmd, alias_seen) if $last_status != 0
     end
   end
 end
