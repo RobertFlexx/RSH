@@ -19,13 +19,13 @@ The core code is written by **RobertFlexx**. Comments were written with help fro
 Live preview (renders as a real webpage):
 
 ```
-https://raw.githack.com/RobertFlexx/RSH/master/srsh-webpage/index.html
+https://raw.githack.com/RobertFlexx/RSH/master/docs/index.html
 ```
 
 Source file in the repository (shows HTML source on GitHub, this is expected):
 
 ```
-https://github.com/RobertFlexx/RSH/blob/master/srsh-webpage/index.html
+https://github.com/RobertFlexx/RSH/blob/master/docs/index.html
 ```
 
 Note: GitHub READMEs cannot force links to open in a new tab. Use middle-click or right-click if you want it opened separately.
