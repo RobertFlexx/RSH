@@ -1,4 +1,4 @@
-# RSH 1.0 language tour
+# RSH 1.0 language tour (hot form)
 name := "Ruby shell"
 ports := [22, 80, 443]
 server := %[name: "main", tls: yes]
