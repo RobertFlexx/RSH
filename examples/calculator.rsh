@@ -1,4 +1,5 @@
 #!/usr/bin/env srsh
+# this is hot form scripting
 
 emit "SRSH Calculator"
 emit "type help for commands"
