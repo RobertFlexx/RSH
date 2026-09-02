@@ -1,183 +1,203 @@
-// the uh *burp* java script file for the other shit
-
 (function () {
+  "use strict";
+
+  const repository = "https://github.com/RobertFlexx/RSH";
+  const api = "https://api.github.com/repos/RobertFlexx/RSH/releases/latest";
   const pages = new Map();
-  document.querySelectorAll(".page").forEach((el) => {
-    pages.set(el.getAttribute("data-page"), el);
+
+  document.querySelectorAll("[data-page]").forEach(function (page) {
+    pages.set(page.getAttribute("data-page"), page);
   });
 
-  const navLinks = Array.from(document.querySelectorAll(".nav__link"));
-  const sideLinks = Array.from(document.querySelectorAll(".side__link"));
-  const toast = document.querySelector("[data-toast]");
-  const toastWrap = document.querySelector(".toast");
-
-  function showToast(msg) {
-    if (!toast || !toastWrap) return;
-    toast.textContent = msg || "Copied.";
-    toastWrap.hidden = false;
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => { toastWrap.hidden = true; }, 1100);
-  }
-
-  function setActiveNav(route) {
-    navLinks.forEach((a) => {
-      const href = a.getAttribute("href") || "";
-      const is = href === "#/" + route || (route === "" && href === "#/");
-      a.classList.toggle("is-active", is);
-    });
-  }
-
-  function setActiveSide(hash) {
-    if (!hash) {
-      sideLinks.forEach((a) => a.classList.remove("is-active"));
-      return;
-    }
-    sideLinks.forEach((a) => {
-      const href = a.getAttribute("href") || "";
-      a.classList.toggle("is-active", href.endsWith("#" + hash));
-    });
-  }
-
-  function parseRoute() {
-    // "#/docs#themes" or "#/download"
-    const raw = (location.hash || "#/").slice(1); // remove leading '#'
-    const parts = raw.split("#");
-    const left = parts[0] || "/";
-    const anchor = parts[1] || "";
-    const page = left.startsWith("/") ? left.slice(1) : left;
-    return { page: page || "", anchor };
-  }
-
-  function showPage(name) {
-    // name "" maps to home
-    const key = name === "" ? "home" : name;
-    let el = pages.get(key);
-    if (!el) el = pages.get("home");
-
-    pages.forEach((node) => node.classList.remove("is-active"));
-    el.classList.add("is-active");
-
-    setActiveNav(key === "home" ? "" : key);
-
-    // Update title in a dumb-simple way (cuz ez)
-    const titles = {
-      home: "srsh — a tiny Ruby shell with RSH scripting",
-      docs: "srsh docs — RSH scripting",
-      download: "srsh download",
-      about: "About srsh",
-      ruby: "About Ruby",
-      github: "srsh on GitHub",
+  function routeFromHash() {
+    const raw = (window.location.hash || "#/").slice(1);
+    const pieces = raw.split("#");
+    const path = (pieces[0] || "/").replace(/^\//, "");
+    return {
+      page: path || "home",
+      anchor: pieces[1] || ""
     };
-    document.title = titles[key] || "srsh";
-
-    return el;
   }
 
-  function scrollToAnchor(anchor) {
-    if (!anchor) return;
-    const target = document.getElementById(anchor);
+  function showRoute() {
+    const route = routeFromHash();
+    const pageName = pages.has(route.page) ? route.page : "home";
+
+    pages.forEach(function (page, name) {
+      page.classList.toggle("active", name === pageName);
+    });
+
+    document.querySelectorAll("[data-route]").forEach(function (link) {
+      const current = link.getAttribute("data-route") === pageName;
+      link.classList.toggle("current", current);
+      if (current) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+
+    const titles = {
+      home: "SRSH 1.0: Simple Ruby Shell",
+      manual: "RSH language manual | SRSH 1.0",
+      download: "Download SRSH 1.0",
+      examples: "RSH examples | SRSH 1.0",
+      project: "Project information | SRSH 1.0"
+    };
+    document.title = titles[pageName] || titles.home;
+
+    document.querySelectorAll(".toc a").forEach(function (link) {
+      link.classList.toggle("current", Boolean(route.anchor) && link.getAttribute("href").endsWith("#" + route.anchor));
+    });
+
+    if (route.anchor) {
+      window.setTimeout(function () {
+        const target = document.getElementById(route.anchor);
+        if (target) target.scrollIntoView({ block: "start" });
+      }, 0);
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }
+
+  window.addEventListener("hashchange", showRoute);
+  showRoute();
+
+  const notice = document.querySelector("[data-copy-notice]");
+  let noticeTimer;
+
+  function showNotice(message) {
+    if (!notice) return;
+    notice.textContent = message;
+    notice.hidden = false;
+    window.clearTimeout(noticeTimer);
+    noticeTimer = window.setTimeout(function () {
+      notice.hidden = true;
+    }, 1400);
+  }
+
+  function fallbackCopy(text) {
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.left = "-10000px";
+    document.body.appendChild(field);
+    field.select();
+
+    try {
+      document.execCommand("copy");
+      showNotice("Copied.");
+    } catch (error) {
+      showNotice("Copy failed.");
+    }
+
+    field.remove();
+  }
+
+  document.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-copy-target]");
+    if (!button) return;
+
+    const target = document.getElementById(button.getAttribute("data-copy-target"));
     if (!target) return;
-    setTimeout(() => {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
-  }
+    const text = target.textContent.replace(/\n$/, "");
 
-  function router() {
-    const { page, anchor } = parseRoute();
-    showPage(page);
-
-    if ((page || "") === "docs") setActiveSide(anchor);
-    else setActiveSide("");
-
-    if (anchor) scrollToAnchor(anchor);
-  }
-
-  window.addEventListener("hashchange", router);
-  router();
-
-  // copy butttons
-  document.addEventListener("click", (ev) => {
-    const btn = ev.target.closest("[data-copy]");
-    if (!btn) return;
-    const text = btn.getAttribute("data-copy") || "";
-    if (!text) return;
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => showToast("Copied.")).catch(() => fallbackCopy(text));
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function () {
+        showNotice("Copied.");
+      }).catch(function () {
+        fallbackCopy(text);
+      });
     } else {
       fallbackCopy(text);
     }
   });
 
-  function fallbackCopy(text) {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "readonly");
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand("copy"); showToast("Copied."); }
-    catch (_) { showToast("Couldn't copy"); }
-    document.body.removeChild(ta);
-  }
+  const searchForm = document.querySelector("[data-doc-search]");
+  const searchResults = document.querySelector("[data-search-results]");
 
-  // home search, routes to docs and highlights matches
-  const searchForm = document.querySelector("[data-search-form]");
-  if (searchForm) {
-    searchForm.addEventListener("submit", (ev) => {
-      ev.preventDefault();
+  if (searchForm && searchResults) {
+    searchForm.addEventListener("submit", function (event) {
+      event.preventDefault();
       const input = searchForm.querySelector("input[type='search']");
-      const q = (input && input.value || "").trim();
-      if (!q) { location.hash = "#/docs"; return; }
-      location.hash = "#/docs";
-      setTimeout(() => highlightDocs(q), 60);
+      const query = input ? input.value.trim().toLowerCase() : "";
+      searchResults.replaceChildren();
+
+      if (!query) {
+        window.location.hash = "#/manual";
+        searchResults.hidden = true;
+        return;
+      }
+
+      const matches = Array.from(document.querySelectorAll("[data-doc-section]")).filter(function (section) {
+        return section.textContent.toLowerCase().includes(query);
+      }).slice(0, 10);
+
+      const heading = document.createElement("strong");
+      heading.textContent = matches.length ? "Manual entries:" : "No manual entries found.";
+      searchResults.appendChild(heading);
+
+      if (matches.length) {
+        const list = document.createElement("ul");
+        matches.forEach(function (section) {
+          const item = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = "#/manual#" + section.id;
+          link.textContent = section.getAttribute("data-title") || section.id;
+          item.appendChild(link);
+          list.appendChild(item);
+        });
+        searchResults.appendChild(list);
+      }
+
+      searchResults.hidden = false;
     });
   }
 
-  function highlightDocs(q) {
-    const docs = pages.get("docs");
-    if (!docs) return;
-    const needle = q.toLowerCase();
+  function findAsset(release, preferredName, pattern) {
+    const assets = Array.isArray(release.assets) ? release.assets : [];
+    return assets.find(function (asset) {
+      return asset.name === preferredName;
+    }) || assets.find(function (asset) {
+      return pattern.test(asset.name);
+    });
+  }
 
-    // cklear old marks
-    docs.querySelectorAll("mark[data-hit]").forEach((m) => {
-      const text = document.createTextNode(m.textContent || "");
-      m.replaceWith(text);
+  function setDownload(kind, url) {
+    if (!url) return;
+    document.querySelectorAll("[data-download='" + kind + "']").forEach(function (link) {
+      link.href = url;
+    });
+  }
+
+  fetch(api, {
+    headers: { "Accept": "application/vnd.github+json" }
+  }).then(function (response) {
+    if (!response.ok) throw new Error("No published release");
+    return response.json();
+  }).then(function (release) {
+    const tag = String(release.tag_name || "1.0.0");
+    const version = tag.replace(/^v/, "");
+    const gem = findAsset(release, "srsh.gem", /^srsh-[0-9].*\.gem$/);
+    const source = findAsset(release, "srsh-source.tar.gz", /^srsh-[0-9].*\.tar\.gz$/);
+    const checksums = findAsset(release, "SHA256SUMS", /^SHA256SUMS$/);
+
+    document.querySelectorAll("[data-latest-version]").forEach(function (element) {
+      element.textContent = version;
     });
 
-    const nodes = docs.querySelectorAll("p, li, code, h2, h1");
-    let firstHit = null;
+    setDownload("gem", gem && gem.browser_download_url);
+    setDownload("source", source && source.browser_download_url);
+    setDownload("checksums", checksums && checksums.browser_download_url);
 
-    nodes.forEach((n) => {
-      const t = n.textContent || "";
-      if (!t.toLowerCase().includes(needle)) return;
-
-      const htmlSafe = escapeHtml(t);
-      const rx = new RegExp("(" + escapeRegExp(q) + ")", "ig");
-      const marked = htmlSafe.replace(rx, "<mark data-hit>$1</mark>");
-      n.innerHTML = marked;
-
-      if (!firstHit) firstHit = n;
+    const date = release.published_at ? new Date(release.published_at).toLocaleDateString() : "";
+    document.querySelectorAll("[data-release-status]").forEach(function (element) {
+      element.textContent = date ? "Published " + date + "." : "Published on GitHub.";
     });
-
-    if (firstHit) {
-      firstHit.scrollIntoView({ behavior: "smooth", block: "center" });
-      showToast("Found matches in docs");
-    } else {
-      showToast("No matches");
-    }
-  }
-
-  function escapeRegExp(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
-
-  function escapeHtml(s) {
-    return s.replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-  }
+  }).catch(function () {
+    document.querySelectorAll("[data-release-status]").forEach(function (element) {
+      element.textContent = "Release details are available from the GitHub release page.";
+    });
+    setDownload("gem", repository + "/releases/latest/download/srsh.gem");
+    setDownload("source", repository + "/releases/latest/download/srsh-source.tar.gz");
+    setDownload("checksums", repository + "/releases/latest/download/SHA256SUMS");
+  });
 })();

@@ -1,0 +1,8 @@
+*.gem
+*.o
+*.so
+*.bundle
+ext/srsh_native/Makefile
+ext/srsh_native/mkmf.log
+coverage/
+.DS_Store

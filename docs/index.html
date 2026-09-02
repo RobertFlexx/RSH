@@ -3,515 +3,701 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>srsh - a tiny Ruby shell with RSH scripting</title>
-  <meta name="description" content="srsh is a simple Ruby-powered shell with a distinct, safe-ish scripting language called RSH.">
+  <meta name="description" content="SRSH is a Unix shell written in Ruby, with the RSH scripting language for structured shell programs.">
+  <title>SRSH 1.0: Simple Ruby Shell</title>
   <link rel="icon" href="assets/srsh-mark.svg">
   <link rel="stylesheet" href="css/style.css">
   <script src="js/app.js" defer></script>
 </head>
-
 <body>
-  <a class="skip" href="#main">Skip to content</a>
+  <a class="skip-link" href="#content">Skip to content</a>
 
-  <header class="topbar" role="banner">
-    <div class="wrap topbar__row">
-      <a class="brand" href="#/">
-        <img class="brand__mark" src="assets/srsh-mark.svg" alt="" aria-hidden="true">
-        <span class="brand__name">srsh</span>
-        <span class="brand__tag">Ruby shell • RSH scripts</span>
-      </a>
-
-      <nav class="nav" aria-label="Primary">
-        <a class="nav__link" href="#/">Home</a>
-        <a class="nav__link" href="#/docs">Docs</a>
-        <a class="nav__link" href="#/download">Download</a>
-        <a class="nav__link" href="#/about">About</a>
-        <a class="nav__link" href="#/ruby">Ruby</a>
-        <a class="nav__link" href="#/github">GitHub</a>
-      </nav>
+  <header class="site-header">
+    <div class="site-width masthead">
+      <a class="site-name" href="#/" aria-label="SRSH home">SRSH</a>
+      <div class="site-title">
+        <strong>Simple Ruby Shell</strong>
+        <span>Unix commands and the RSH language</span>
+      </div>
+      <div class="version-box">Version <span data-latest-version>1.0.0</span></div>
     </div>
+    <nav class="main-nav" aria-label="Main navigation">
+      <div class="site-width">
+        <a href="#/" data-route="home">Home</a>
+        <a href="#/manual" data-route="manual">Language manual</a>
+        <a href="#/download" data-route="download">Download</a>
+        <a href="#/examples" data-route="examples">Examples</a>
+        <a href="#/project" data-route="project">Project</a>
+      </div>
+    </nav>
   </header>
 
-  <main id="main" class="wrap" role="main">
-    <!-- HOME -->
-    <section class="page page--home" data-page="home">
-      <div class="hero">
-        <div class="hero__left">
-          <h1 class="hero__title">
-            srsh
-            <span class="hero__subtitle">a small shell with a weird little scripting language</span>
-          </h1>
+  <div class="site-width status-line">
+    Current source: 1.0.0&nbsp;&nbsp;|&nbsp;&nbsp;Requires Ruby 3.2 or newer&nbsp;&nbsp;|&nbsp;&nbsp;Unix systems
+  </div>
 
-          <p class="hero__blurb">
-            srsh is a Ruby-powered interactive shell with <strong>RSH</strong> scripting: familiar-ish keywords,
-            not Ruby eval, and a focus on staying simple. It’s not trying to replace your real shell, it’s trying
-            to be fun and usable.
+  <main id="content" class="site-width site-body">
+    <section class="page" data-page="home">
+      <div class="home-layout">
+        <article>
+          <h1>SRSH 1.0</h1>
+          <p class="lead">SRSH is a Unix shell written in Ruby. RSH is the language built into it.</p>
+          <p>
+            Ordinary commands keep ordinary shell syntax. When a script needs lists, maps, functions,
+            errors, workers, modules, or objects, it can use RSH without leaving the shell.
           </p>
 
-          <form class="search" data-search-form>
-            <label class="search__label" for="q">Search docs</label>
-            <div class="search__row">
-              <input id="q" name="q" class="search__input" type="search" autocomplete="off"
-                     placeholder="try: while, scheme, plugins, $?, emit, times">
-              <button class="btn btn--primary" type="submit">Search</button>
-            </div>
-            <p class="search__hint">
-              Tip: you can also jump pages with <code>#/docs</code>, <code>#/download</code>, etc.
-            </p>
+          <div class="listing">
+            <div class="listing-title">A small RSH program</div>
+            <pre id="home-example"><code>branch := $(git branch --show-current)
+
+files := glob("src/**/*.rb")
+  |&gt; reject(::path =&gt; contains(path, "/vendor/"))
+  |&gt; sort
+
+? files |&gt; len &gt; 20 =&gt; = "#{branch}: plenty of Ruby"</code></pre>
+            <button class="copy-button" type="button" data-copy-target="home-example">copy</button>
+          </div>
+
+          <h2>Two kinds of pipe</h2>
+          <p>SRSH keeps process pipelines and value pipelines separate.</p>
+          <table class="reference-table">
+            <thead>
+              <tr><th>Form</th><th>What moves</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>command | command</code></td><td>Bytes between Unix processes</td></tr>
+              <tr><td><code>value |&gt; function</code></td><td>RSH values between functions</td></tr>
+              <tr><td><code>$(command)</code></td><td>Command output into an RSH string</td></tr>
+              <tr><td><code>cmd("git", "status")</code></td><td>Arguments kept as structured data</td></tr>
+            </tbody>
+          </table>
+
+          <h2>What is implemented</h2>
+          <div class="columns">
+            <ul>
+              <li>Unix pipelines, redirection, connectors, and background jobs</li>
+              <li>Local and environment bindings</li>
+              <li>Lists, maps, ranges, strings, numbers, booleans, and <code>void</code></li>
+              <li>Functions, lambdas, closures, and value pipelines</li>
+              <li>Pattern matching and safe access</li>
+            </ul>
+            <ul>
+              <li>Prototypes, traits, namespaces, and modules</li>
+              <li>Structured errors and deferred cleanup</li>
+              <li>Tasks, atoms, channels, thread pools, and process workers</li>
+              <li>Parsed code values and reflection</li>
+              <li>Direct C ABI calls with <code>bridge</code></li>
+            </ul>
+          </div>
+
+          <h2>Find a manual entry</h2>
+          <form class="doc-search" data-doc-search>
+            <label for="manual-search">Search this manual:</label>
+            <input id="manual-search" type="search" autocomplete="off" placeholder="try: tasks, match, bridge, glob">
+            <button type="submit">Search</button>
           </form>
+          <div class="search-results" data-search-results hidden></div>
+        </article>
 
-          <div class="hero__cta">
-            <a class="btn" href="#/download">Get srsh</a>
-            <a class="btn btn--ghost" href="#/docs">Read the docs</a>
-          </div>
-        </div>
+        <aside class="home-side">
+          <section class="side-box download-box">
+            <h2>Download</h2>
+            <p>Release files are built from version tags by GitHub Actions.</p>
+            <a class="download-link" data-download="gem" href="https://github.com/RobertFlexx/RSH/releases/latest/download/srsh.gem">Download latest gem</a>
+            <a class="download-link secondary" data-download="source" href="https://github.com/RobertFlexx/RSH/releases/latest/download/srsh-source.tar.gz">Download source archive</a>
+            <p class="small"><a href="https://github.com/RobertFlexx/RSH/releases/latest">Release notes and checksums</a></p>
+          </section>
 
-        <div class="hero__right">
-          <div class="card card--terminal" aria-label="srsh preview">
-            <div class="terminal">
-              <div class="terminal__bar">
-                <span class="dot dot--r"></span>
-                <span class="dot dot--y"></span>
-                <span class="dot dot--g"></span>
-                <span class="terminal__title">srsh</span>
-              </div>
-              <pre class="terminal__body"><code>$ srsh
-Welcome to srsh 0.8.0
-/home/user &gt; scheme ocean
-scheme: now using 'ocean'
-/home/user &gt; emit "FPS: " .. rand(300)
-FPS: 219
-/home/user &gt; </code></pre>
-            </div>
-          </div>
+          <section class="side-box">
+            <h2>Quick start</h2>
+            <pre><code>gem install ./srsh.gem
+srsh</code></pre>
+            <p><a href="#/download">Installation details</a></p>
+          </section>
 
-          <div class="mini">
-            <div class="mini__item">
-              <div class="mini__k">Gem</div>
-              <div class="mini__v"><code>gem install srsh</code></div>
-            </div>
-            <div class="mini__item">
-              <div class="mini__k">RSH</div>
-              <div class="mini__v">if / while / fn / times</div>
-            </div>
-            <div class="mini__item">
-              <div class="mini__k">Mods</div>
-              <div class="mini__v"><code>~/.srsh/plugins</code></div>
-            </div>
-          </div>
-        </div>
+          <section class="side-box">
+            <h2>Documents</h2>
+            <ul class="plain-links">
+              <li><a href="#/manual">Language manual</a></li>
+              <li><a href="#/examples">Example programs</a></li>
+              <li><a href="https://github.com/RobertFlexx/RSH/blob/master/language-docs/MIGRATION.md">Migration notes</a></li>
+              <li><a href="https://github.com/RobertFlexx/RSH/blob/master/language-docs/SECURITY.md">Security notes</a></li>
+            </ul>
+          </section>
+        </aside>
       </div>
-
-      <div class="grid">
-        <article class="card">
-          <h2 class="card__title">Why srsh exists</h2>
-          <p class="card__text">
-            For people who like tinkering with shells, themes, plugins, and little languages without needing to
-            write C or fight your system shell config.
-          </p>
-          <p class="card__text">
-            It’s also a nice playground for RSH: a purposely-limited expression engine and script runner.
-          </p>
-          <a class="card__link" href="#/about">Read the story →</a>
-        </article>
-
-        <article class="card">
-          <h2 class="card__title">RSH at a glance</h2>
-          <ul class="list">
-            <li><code>emit</code> prints expression results</li>
-            <li><code>$NAME</code>, <code>$1</code>, <code>$?</code> expansion</li>
-            <li><code>times 10</code> loops with <code>it</code></li>
-            <li><code>fn name args...</code> defines functions</li>
-          </ul>
-          <a class="card__link" href="#/docs">See examples →</a>
-        </article>
-
-        <article class="card">
-          <h2 class="card__title">Themes & plugins</h2>
-          <p class="card__text">
-            Drop <code>.theme</code> / <code>.json</code> themes into <code>~/.srsh/themes</code>.
-            Drop <code>.rsh</code> or <code>.rb</code> into <code>~/.srsh/plugins</code>.
-          </p>
-          <a class="card__link" href="#/docs#themes">Theme docs →</a>
-        </article>
-      </div>
-
-      <footer class="foot">
-        <div class="foot__row">
-          <span>srsh is community-y and evolving.</span>
-          <span class="foot__sep">•</span>
-          <a href="#/github">Contribute on GitHub</a>
-        </div>
-      </footer>
     </section>
 
-    <!-- DOCS -->
-    <section class="page" data-page="docs">
-      <div class="pagehead">
-        <h1 class="pagehead__title">Documentation</h1>
-        <p class="pagehead__sub">
-          RSH scripting + srsh builtins. No server required. No magic. Just files.
-        </p>
+    <section class="page" data-page="manual">
+      <div class="page-heading">
+        <h1>RSH language manual</h1>
+        <p>This manual describes the 1.0 source tree. Examples use the readable syntax unless the short form is the point.</p>
       </div>
 
-      <div class="layout">
-        <aside class="side" aria-label="Docs navigation">
-          <div class="side__box">
-            <div class="side__title">Docs</div>
-            <a class="side__link" href="#/docs#quickstart">Quickstart</a>
-            <a class="side__link" href="#/docs#rsh">RSH basics</a>
-            <a class="side__link" href="#/docs#expr">Expressions</a>
-            <a class="side__link" href="#/docs#control">Control flow</a>
-            <a class="side__link" href="#/docs#functions">Functions</a>
-            <a class="side__link" href="#/docs#builtins">Builtins</a>
-            <a class="side__link" href="#/docs#themes">Themes</a>
-            <a class="side__link" href="#/docs#plugins">Plugins</a>
-          </div>
-
-          <div class="side__box">
-            <div class="side__title">Jump</div>
-            <a class="side__link" href="#/download">Download</a>
-            <a class="side__link" href="#/about">About srsh</a>
-          </div>
+      <div class="manual-layout">
+        <aside class="toc" aria-label="Manual contents">
+          <strong>Contents</strong>
+          <a href="#/manual#getting-started">1. Getting started</a>
+          <a href="#/manual#shell">2. Shell commands</a>
+          <a href="#/manual#values">3. Values</a>
+          <a href="#/manual#bindings">4. Bindings</a>
+          <a href="#/manual#operators">5. Operators</a>
+          <a href="#/manual#functions">6. Functions</a>
+          <a href="#/manual#control">7. Control flow</a>
+          <a href="#/manual#matching">8. Pattern matching</a>
+          <a href="#/manual#collections">9. Collections</a>
+          <a href="#/manual#objects">10. Prototypes</a>
+          <a href="#/manual#modules">11. Namespaces</a>
+          <a href="#/manual#errors">12. Errors and cleanup</a>
+          <a href="#/manual#concurrency">13. Concurrency</a>
+          <a href="#/manual#commands">14. Command values</a>
+          <a href="#/manual#bridge">15. C bridges</a>
+          <a href="#/manual#meta">16. Code and reflection</a>
+          <a href="#/manual#builtins">17. Function reference</a>
+          <a href="#/manual#configuration">18. Shell configuration</a>
         </aside>
 
-        <article class="doc">
-          <section id="quickstart" class="doc__section">
-            <h2>Quickstart</h2>
-            <p>Install the gem:</p>
-            <div class="codebox">
-              <pre><code>gem install srsh</code></pre>
-              <button class="copy" data-copy="gem install srsh">Copy</button>
+        <article class="manual">
+          <section id="getting-started" data-doc-section data-title="Getting started">
+            <h2>1. Getting started</h2>
+            <p>Start the interactive shell with <code>srsh</code>, run a script by path, or evaluate a single expression.</p>
+            <div class="listing">
+              <pre id="start-code"><code>srsh
+srsh script.rsh one two
+srsh -e "[1,2,3] |&gt; sum"
+srsh --check script.rsh
+srsh -c "printf 'hello\n'"
+srsh --norc</code></pre>
+              <button class="copy-button" type="button" data-copy-target="start-code">copy</button>
             </div>
-
-            <p>Run it:</p>
-            <div class="codebox">
-              <pre><code>srsh</code></pre>
-              <button class="copy" data-copy="srsh">Copy</button>
-            </div>
-
-            <p>Change theme:</p>
-            <div class="codebox">
-              <pre><code>scheme --list
-scheme ocean</code></pre>
-              <button class="copy" data-copy="scheme --list&#10;scheme ocean">Copy</button>
-            </div>
-          </section>
-
-          <section id="rsh" class="doc__section">
-            <h2>RSH basics</h2>
             <p>
-              RSH scripts are plain text files. srsh reads them, strips comments (<code>#</code> outside quotes),
-              parses blocks, and runs commands line-by-line.
+              At the prompt, assignments, expressions, functions, and blocks are parsed as RSH. Other input is handled as a shell command.
+              The editor understands multiline blocks, collections, command continuations, and bracketed paste.
             </p>
-
-            <p>A tiny script:</p>
-            <div class="codebox">
-              <pre><code># hello.rsh
-put "hello"
-NAME = "world"
-emit "hello, " .. $NAME</code></pre>
-              <button class="copy" data-copy="# hello.rsh&#10;put &quot;hello&quot;&#10;NAME = &quot;world&quot;&#10;emit &quot;hello, &quot; .. $NAME">Copy</button>
-            </div>
           </section>
 
-          <section id="expr" class="doc__section">
-            <h2>Expressions</h2>
-            <p>Expressions are parsed by the RSH lexer/parser, not Ruby. Basic operators:</p>
-
-            <ul class="list">
-              <li>math: <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code></li>
-              <li>compare: <code>==</code> <code>!=</code> <code>&lt;</code> <code>&lt;=</code> <code>&gt;</code> <code>&gt;=</code></li>
-              <li>logic: <code>and</code> / <code>or</code> / <code>not</code> (also <code>&amp;&amp;</code>, <code>||</code>, <code>!</code>)</li>
-              <li>concat: <code>..</code> (string-ish join)</li>
-            </ul>
-
-            <p>Functions you can call in expressions:</p>
-            <div class="codebox">
-              <pre><code>emit len("abc")
-emit contains("srsh", "rsh")
-emit rand(10)
-emit pick("sand", "water", "lava")</code></pre>
-              <button class="copy" data-copy="emit len(&quot;abc&quot;)&#10;emit contains(&quot;srsh&quot;, &quot;rsh&quot;)&#10;emit rand(10)&#10;emit pick(&quot;sand&quot;, &quot;water&quot;, &quot;lava&quot;)">Copy</button>
-            </div>
+          <section id="shell" data-doc-section data-title="Shell commands and jobs">
+            <h2>2. Shell commands and jobs</h2>
+            <p>These forms run commands through the shell executor:</p>
+            <div class="listing"><pre><code>cat *.log | grep ERROR | sort -u
+make -j8 &amp;&amp; put built
+generate &gt; output.txt 2&gt; errors.txt
+long_job &amp;
+jobs
+fg %1</code></pre></div>
+            <p>
+              Implemented operators are <code>|</code>, <code>&amp;&amp;</code>, <code>||</code>, <code>;</code>, and background <code>&amp;</code>.
+              Redirections include <code>&lt;</code>, <code>&gt;</code>, <code>&gt;&gt;</code>, <code>2&gt;</code>, and <code>2&gt;&gt;</code>.
+              The shell supports process groups, <code>jobs</code>, <code>fg</code>, <code>bg</code>, <code>wait %N</code>, aliases, globbing,
+              tilde expansion, and nested command substitution.
+            </p>
+            <p>No-match globs stay literal. SRSH is not a Bash parser, so existing Bash scripts should still be run with Bash.</p>
           </section>
 
-          <section id="control" class="doc__section">
-            <h2>Control flow</h2>
-            <p>Blocks end with <code>end</code>. It’s intentionally old-school.</p>
+          <section id="values" data-doc-section data-title="Values and literals">
+            <h2>3. Values and literals</h2>
+            <div class="listing"><pre><code>42  -12  0xff  0b1010  0o755  1_000_000
+3.14159  2.5e6
+yes  no  void
 
-            <div class="codebox">
-              <pre><code>if $USER == "user"
-  put "wsg gng"
+"hello #{name}"
+'no interpolation #{name}'
+[[raw text #{name}]]
+
+[1, 2, 3]
+%[name: "srsh", ready: yes]
+1 .. 10
+0 ..&lt; 10</code></pre></div>
+            <p>
+              Double quoted strings interpolate full RSH expressions. Single quoted and raw strings do not.
+              Maps use <code>%[...]</code>. Ranges can include or exclude the upper bound.
+            </p>
+            <p>Member access uses <code>value.name</code> and indexed access uses <code>value[index]</code>. Safe forms return <code>void</code> when access cannot be completed:</p>
+            <div class="listing"><pre><code>host := cfg?.server?.host ?? "localhost"
+first := cfg?.hosts?[0] ?? host</code></pre></div>
+          </section>
+
+          <section id="bindings" data-doc-section data-title="Bindings and assignment">
+            <h2>4. Bindings and assignment</h2>
+            <div class="listing"><pre><code>name := "Robert"
+count := 4
+count += 1
+name ++= "!"
+
+$EDITOR := "vim"
+home := $HOME
+first_arg := $1
+last_status := $?</code></pre></div>
+            <p>
+              <code>:=</code> creates a local in the current lexical scope. Compound assignment updates the nearest existing local.
+              A leading <code>$</code> on assignment writes the process environment. Shell commands can expand locals, environment variables,
+              positional arguments, <code>$?</code>, and <code>$!</code>.
+            </p>
+            <p>Tasks receive isolated copies of ordinary lists and maps. Shared mutation must use a prototype object, atom, or channel.</p>
+          </section>
+
+          <section id="operators" data-doc-section data-title="Operators and value pipelines">
+            <h2>5. Operators and value pipelines</h2>
+            <p>Operator groups, from loose to tight, are approximately:</p>
+            <div class="listing"><pre><code>??
+or  ||
+and &amp;&amp;
+== != === !== =~ !~ in
+&lt; &lt;= &gt; &gt;=
+|&gt;
+.. ..&lt;
++ - ++
+* / %
+**</code></pre></div>
+            <p><code>++</code> concatenates strings. <code>+</code> is numeric unless its operands support a sensible arithmetic addition. Strict equality uses <code>===</code>.</p>
+            <p>The value pipeline inserts its left side as the first argument to the call on its right:</p>
+            <div class="listing"><pre><code>names := glob("src/**/*.rb")
+  |&gt; map(::path =&gt; basename(path))
+  |&gt; uniq
+  |&gt; sort</code></pre></div>
+          </section>
+
+          <section id="functions" data-doc-section data-title="Functions lambdas and tasks">
+            <h2>6. Functions, lambdas, and tasks</h2>
+            <div class="listing"><pre><code>fn scale(x, by := 2)
+  return x * by
+end
+
+fn square(x) =&gt; x * x
+
+double := ::x =&gt; x * 2
+sum_rest := ::(head, *tail) =&gt; tail |&gt; sum
+
+task fetch(url)
+  return cmd("curl", "-fsS", url).check().out
+end</code></pre></div>
+            <p>
+              Functions are first-class values and closures capture lexical values. Parameters may have defaults and one trailing rest parameter.
+              A <code>task</code> has the same parameter rules, but calling it starts work immediately and returns a task handle.
+            </p>
+            <p>Short named functions use <code>:: name(args) ... .::</code>. A caret is accepted as the short spelling of <code>return</code>.</p>
+          </section>
+
+          <section id="control" data-doc-section data-title="Conditionals loops and short forms">
+            <h2>7. Control flow</h2>
+            <div class="listing"><pre><code>if score &gt;= 90
+  emit "great"
 else
-  put "hello"
+  emit "keep going"
 end
 
-times 5
-  emit "it=" .. $it
+each users -&gt; user
+  = user.name
 end
 
-i = 0
-while $i &lt; 3
-  put "looping"
-  i = $i + 1
-end</code></pre>
-              <button class="copy" data-copy="if $USER == &quot;user&quot;&#10;  put &quot;wsg gng&quot;&#10;else&#10;  put &quot;hello&quot;&#10;end&#10;&#10;times 5&#10;  emit &quot;it=&quot; .. $it&#10;end&#10;&#10;i = 0&#10;while $i &lt; 3&#10;  put &quot;looping&quot;&#10;  i = $i + 1&#10;end">Copy</button>
-            </div>
+while pending
+  work()
+end</code></pre></div>
+            <p>Integers are iterable, so <code>each 3 -&gt; i</code> visits 0, 1, and 2. Maps yield key and value pairs. Lists and pairs can be destructured.</p>
+            <div class="listing"><pre><code>head, second, *rest := [10, 20, 30, 40]
+
+? ready =&gt; emit "go"
+@ users -&gt; user =&gt; = user.name
+@? pending
+  work()
+.@</code></pre></div>
+            <p>The short block markers are <code>? ... .?</code> for conditions and <code>@ ... .@</code> for loops. Use <code>break</code> or <code>^!</code>, and <code>continue</code> or <code>^&gt;</code>.</p>
+            <p>The original <code>times N ... end</code> loop and <code>fn name arg ... end</code> function spelling remain available for older scripts.</p>
           </section>
 
-          <section id="functions" class="doc__section">
-            <h2>Functions</h2>
+          <section id="matching" data-doc-section data-title="Pattern matching">
+            <h2>8. Pattern matching</h2>
+            <div class="listing"><pre><code>match status
+| 200..299 =&gt; = "ok"
+| [401, 403] =&gt; = "auth"
+| ? it &gt;= 500 =&gt; = "server"
+| _ =&gt; = "other"
+end</code></pre></div>
             <p>
-              RSH functions are defined with <code>fn</code>. Arguments become ENV variables inside the function.
+              Patterns may be values, ranges, lists, partial maps, prototype references, or guard expressions.
+              The matched value is available as <code>it</code> in a guard. The short form begins with <code>??</code> and ends with <code>.??</code>.
             </p>
+          </section>
 
-            <div class="codebox">
-              <pre><code>fn greet who
-  emit "hello " .. $who
+          <section id="collections" data-doc-section data-title="Collection functions">
+            <h2>9. Collection functions</h2>
+            <p>The collection toolbox works in call form, pipeline form, and usually method form.</p>
+            <div class="word-list"><code>map filter reject fold find any all count sum each sort uniq flat zip enumerate take drop chunk group tap partial compose</code></div>
+            <div class="listing"><pre><code>total := [1,2,3,4,5,6]
+  .filter(::x =&gt; x % 2 == 0)
+  .map(::x =&gt; x ** 2)
+  .sum()
+
+by_ext := files |&gt; group(::path =&gt; ext(path))</code></pre></div>
+            <p>File, path, string, and JSON helpers include:</p>
+            <div class="word-list"><code>readfile writefile appendfile exists file dir glob stat mkdirp rmfile cpfile mvfile basename dirname ext json json_dump lines words replace upper lower trim split join shellquote</code></div>
+          </section>
+
+          <section id="objects" data-doc-section data-title="Prototypes traits and objects">
+            <h2>10. Prototypes, traits, and objects</h2>
+            <p>RSH uses prototypes with composable traits instead of class inheritance.</p>
+            <div class="listing"><pre><code>trait Printable
+  fn show() =&gt; "#{self.name}=#{self.value}"
 end
 
-greet "world"</code></pre>
-              <button class="copy" data-copy="fn greet who&#10;  emit &quot;hello &quot; .. $who&#10;end&#10;&#10;greet &quot;world&quot;">Copy</button>
-            </div>
-          </section>
+proto Counter(name, start := 0) with Printable
+  slot name := name
+  slot value := start
 
-          <section id="builtins" class="doc__section">
-            <h2>Builtins</h2>
-            <p>Some useful commands:</p>
+  fn inc(by := 1)
+    self.value += by
+    return self
+  end
+end
 
-            <div class="table">
-              <div class="row"><div class="cell k"><code>help</code></div><div class="cell v">Show builtins and RSH blocks</div></div>
-              <div class="row"><div class="cell k"><code>scheme --list</code></div><div class="cell v">List themes</div></div>
-              <div class="row"><div class="cell k"><code>scheme ocean</code></div><div class="cell v">Set theme</div></div>
-              <div class="row"><div class="cell k"><code>reload</code></div><div class="cell v">Reload ~/.srshrc and plugins</div></div>
-              <div class="row"><div class="cell k"><code>plugins</code></div><div class="cell v">Show loaded plugin files</div></div>
-              <div class="row"><div class="cell k"><code>source file.rsh</code></div><div class="cell v">Run an RSH script</div></div>
-            </div>
-          </section>
-
-          <section id="themes" class="doc__section">
-            <h2>Themes</h2>
+counter := Counter("requests", 10)
+counter.inc()</code></pre></div>
             <p>
-              Themes live in <code>~/.srsh/themes</code>. You can write either a simple <code>.theme</code> file
-              or JSON.
+              Slot compound updates are synchronized. Reflection helpers include <code>fields()</code>, <code>methods()</code>,
+              <code>protoof()</code>, <code>is()</code>, and <code>clone()</code>.
             </p>
+          </section>
 
-            <div class="codebox">
-              <pre><code># ~/.srsh/themes/my.theme
-ui_border=1;35
-ui_title=1;33
-ui_hdr=1;36
-ui_key=1;36
-ui_val=0;37
+          <section id="modules" data-doc-section data-title="Namespaces modules and use">
+            <h2>11. Namespaces and modules</h2>
+            <div class="listing"><pre><code>space build
+  root := "out"
+  fn artifact(name) =&gt; root ++ "/" ++ name
+end
+
+use "./lib/net.rsh" as net
+
+= build.artifact("app")
+= net.fetch(url)</code></pre></div>
+            <p>
+              A <code>space</code> may contain bindings, functions, tasks, prototypes, traits, nested spaces, bridges, and code declarations.
+              <code>use</code> runs a file inside its own namespace. Relative paths are resolved against the importing script, and import cycles are rejected.
+            </p>
+          </section>
+
+          <section id="errors" data-doc-section data-title="Structured errors defer and attempt">
+            <h2>12. Errors and cleanup</h2>
+            <div class="listing"><pre><code>try
+  cfg := json(readfile("config.json"))
+catch err
+  = err.message
+  cfg := %[]
+finally
+  audit("attempted")
+end
+
+defer rmfile(tmp)
+result := attempt(:: =&gt; risky())</code></pre></div>
+            <p>
+              Caught errors provide at least <code>.type</code> and <code>.message</code>. Deferred calls and blocks run last-in, first-out when
+              the current script or function scope exits, including on return and error. <code>fail()</code> raises an error and <code>assert()</code> checks a condition.
+            </p>
+          </section>
+
+          <section id="concurrency" data-doc-section data-title="Tasks atoms channels parallel and pmap">
+            <h2>13. Concurrency</h2>
+            <div class="listing"><pre><code>jobs := urls |&gt; map(fetch)
+pages := await_all(jobs)
+
+job := &amp;:: =&gt; expensive_io()
+= job.await(2.0)
+
+hits := atom(0)
+hits.swap(::n =&gt; n + 1)
+
+queue := chan(8)
+queue.send("hello")
+= queue.recv(1.0)</code></pre></div>
+            <p>
+              Task methods are <code>await</code>, <code>done</code>, <code>status</code>, and <code>cancel</code>.
+              <code>race(tasks)</code> cancels losers. <code>await_all(tasks)</code> preserves order and cancels unfinished siblings when one fails.
+            </p>
+            <p>
+              <code>parallel(values, fn, workers)</code> uses Ruby threads and suits files, networks, and subprocess waits.
+              <code>pmap(values, fn, workers)</code> uses Unix fork workers for CPU work and preserves input order.
+            </p>
+          </section>
+
+          <section id="commands" data-doc-section data-title="Structured command values">
+            <h2>14. Structured command values</h2>
+            <div class="listing"><pre><code>job := cmd("git", "rev-parse", "--verify", ref)
+result := job.check()
+sha := result.out.trim()</code></pre></div>
+            <table class="reference-table compact">
+              <tbody>
+                <tr><th><code>.argv()</code></th><td>Return a copy of the argument vector.</td></tr>
+                <tr><th><code>.run()</code></th><td>Inherit the terminal and return status.</td></tr>
+                <tr><th><code>.result()</code></th><td>Capture standard output, standard error, and status.</td></tr>
+                <tr><th><code>.capture()</code></th><td>Return standard output as a string.</td></tr>
+                <tr><th><code>.check()</code></th><td>Return the result or raise on nonzero status.</td></tr>
+                <tr><th><code>.task()</code></th><td>Run the command in an RSH task.</td></tr>
+              </tbody>
+            </table>
+            <p>Use <code>cmd()</code> when filenames, URLs, or other data must stay separate arguments and must not be parsed as shell text.</p>
+          </section>
+
+          <section id="bridge" data-doc-section data-title="C ABI bridge and cbuf">
+            <h2>15. C ABI bridges</h2>
+            <div class="warning"><strong>Warning:</strong> A wrong native signature can crash the SRSH process. Read the security notes before using pointers.</div>
+            <div class="listing"><pre><code>bridge libc from "libc.so.6"
+  getpid() -&gt; i32
+  strlen(cstr) -&gt; usize
+  gethostname(ptr, usize) -&gt; i32
+end
+
+buf := cbuf(256)
+libc.gethostname(buf, buf.size())
+= buf.string()</code></pre></div>
+            <p><code>@self</code> loads symbols from the current process. Supported ABI names are:</p>
+            <div class="word-list"><code>void bool i8 u8 i16 u16 i32 u32 i64 u64 isize usize f32 f64 cstr ptr</code></div>
+            <p>Buffer methods include <code>size</code>, <code>address</code>, <code>ptr</code>, <code>read</code>, <code>write</code>, <code>string</code>, and <code>clear</code>.</p>
+          </section>
+
+          <section id="meta" data-doc-section data-title="Code values evaluation and reflection">
+            <h2>16. Code values and reflection</h2>
+            <div class="listing"><pre><code>code cleanup
+  rm build/tmp/cache
+end
+
+= sourceof(cleanup)
+run(cleanup)
+
+formula := "x * 3"
+= eval(formula)</code></pre></div>
+            <p>
+              <code>code ... end</code> parses source without running it. Dynamic helpers are <code>eval</code>, <code>code</code>, <code>run</code>,
+              <code>valid</code>, and <code>sourceof</code>. Introspection functions include <code>locals</code>, <code>fns</code>, <code>protos</code>, and <code>traits</code>.
+            </p>
+          </section>
+
+          <section id="builtins" data-doc-section data-title="Built-in function reference">
+            <h2>17. Built-in function reference</h2>
+            <table class="reference-table compact">
+              <tbody>
+                <tr><th>Conversion</th><td><code>int float str bool type</code></td></tr>
+                <tr><th>Numbers and choice</th><td><code>round floor ceil sqrt clamp abs min max rand pick</code></td></tr>
+                <tr><th>Strings</th><td><code>len empty contains starts ends starts_with ends_with split join upper lower trim replace lines words</code></td></tr>
+                <tr><th>Maps</th><td><code>keys values fields</code></td></tr>
+                <tr><th>Environment</th><td><code>env cwd clock status cpu_count</code></td></tr>
+                <tr><th>Processes</th><td><code>capture sh cmd shellquote</code></td></tr>
+                <tr><th>Concurrency</th><td><code>spawn await await_all race parallel pmap chan atom sleep</code></td></tr>
+                <tr><th>Errors</th><td><code>attempt fail assert</code></td></tr>
+                <tr><th>Objects</th><td><code>clone fields methods protoof is</code></td></tr>
+                <tr><th>Files</th><td><code>readfile writefile appendfile exists file dir glob stat mkdirp rmfile cpfile mvfile basename dirname ext</code></td></tr>
+                <tr><th>Data</th><td><code>json json_dump</code></td></tr>
+                <tr><th>Code</th><td><code>eval code run sourceof valid locals fns protos traits</code></td></tr>
+                <tr><th>Native</th><td><code>cbuf</code></td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section id="configuration" data-doc-section data-title="Shell options themes plugins and files">
+            <h2>18. Shell configuration</h2>
+            <p>Shell strictness is controlled with regular shell commands:</p>
+            <div class="listing"><pre><code>option pipefail yes
+option nounset yes
+option noclobber yes
+option strict yes</code></pre></div>
+            <p><code>strict</code> enables <code>pipefail</code> and <code>nounset</code>. It does not copy Bash <code>set -e</code>.</p>
+            <table class="reference-table compact">
+              <tbody>
+                <tr><th><code>~/.srshrc</code></th><td>Startup commands</td></tr>
+                <tr><th><code>~/.srsh_history</code></th><td>Interactive history</td></tr>
+                <tr><th><code>~/.srsh/themes</code></th><td>Private <code>.theme</code> and <code>.json</code> theme files</td></tr>
+                <tr><th><code>~/.srsh/plugins</code></th><td>Private <code>.rsh</code> and trusted <code>.rb</code> plugins</td></tr>
+              </tbody>
+            </table>
+            <p>
+              Use <code>scheme --list</code>, <code>scheme NAME</code>, <code>plugins</code>, and <code>reload</code> to manage the interactive environment.
+              Ruby plugins are trusted code. Plugin and theme files must pass owner and mode checks before automatic loading.
+            </p>
+            <p>Core shell commands are:</p>
+            <div class="word-list"><code>cd pwd put echo printf ls alias unalias set export unset read true false sleep source . exit quit help hist clearhist scheme theme themes plugins reload jobs wait fg bg exec systemfetch which type dirs pushd popd umask kill option</code></div>
+            <p>A simple theme file uses ANSI SGR values:</p>
+            <div class="listing"><pre><code># ~/.srsh/themes/amber.theme
+border=1;33
+title=1;37
+key=33
+value=0;37
 ok=32
 warn=33
-err=31
+error=31
 dim=90
-prompt_path=33
-prompt_host=36
-prompt_mark=35
-quote_rainbow=true</code></pre>
-            </div>
-
-            <p>Then:</p>
-            <div class="codebox">
-              <pre><code>scheme my</code></pre>
-              <button class="copy" data-copy="scheme my">Copy</button>
-            </div>
+path=33
+host=36
+mark=35</code></pre></div>
+            <p>Ruby plugins receive the <code>SRSH</code> API and may register builtins, hooks, aliases, and themes. RSH plugin files run as ordinary RSH scripts.</p>
           </section>
 
-          <section id="plugins" class="doc__section">
-            <h2>Plugins</h2>
-            <p>
-              Put <code>.rsh</code> or <code>.rb</code> files in <code>~/.srsh/plugins</code>.
-              RSH plugins run first (safer), Ruby plugins run second (trusted).
-            </p>
-
-            <div class="codebox">
-              <pre><code># ~/.srsh/plugins/hello.rsh
-alias ll='ls'
-put "srsh plugin loaded"</code></pre>
-            </div>
-
-            <p>A tiny Ruby plugin can register a builtin via the SRSH API:</p>
-            <div class="codebox">
-              <pre><code># ~/.srsh/plugins/hi.rb
-SRSH.builtin("hi") do |_args|
-  puts "hi from ruby plugin"
-end</code></pre>
-            </div>
-          </section>
-
-          <div class="doc__end">
-            <p>That’s the basics. If you break it, you get to keep both pieces :D</p>
-          </div>
+          <p class="back-top"><a href="#/manual">Back to the top of the manual</a></p>
         </article>
       </div>
     </section>
 
-    <!-- DOWNLOAD -->
     <section class="page" data-page="download">
-      <div class="pagehead">
-        <h1 class="pagehead__title">Download</h1>
-        <p class="pagehead__sub">srsh is distributed as a RubyGem.</p>
+      <div class="page-heading">
+        <h1>Download SRSH</h1>
+        <p>Release artifacts are produced from a matching version tag after the test suite and release checks pass.</p>
       </div>
 
-      <div class="grid grid--2">
-        <article class="card">
-          <h2 class="card__title">Install (recommended)</h2>
-          <div class="codebox">
-            <pre><code>gem install srsh</code></pre>
-            <button class="copy" data-copy="gem install srsh">Copy</button>
-          </div>
-          <p class="card__text">
-            After install, run <code>srsh</code> and you should see the welcome banner.
-          </p>
-          <div class="codebox">
-            <pre><code>srsh</code></pre>
-            <button class="copy" data-copy="srsh">Copy</button>
-          </div>
-        </article>
-
-        <article class="card">
-          <h2 class="card__title">Update</h2>
-          <div class="codebox">
-            <pre><code>gem update srsh</code></pre>
-            <button class="copy" data-copy="gem update srsh">Copy</button>
-          </div>
-          <p class="card__text">
-            If your PATH points to an older install (like <code>/usr/local/bin</code>), check with:
-          </p>
-          <div class="codebox">
-            <pre><code>which -a srsh</code></pre>
-            <button class="copy" data-copy="which -a srsh">Copy</button>
-          </div>
-        </article>
+      <div class="download-panel">
+        <h2>Latest release: <span data-latest-version>1.0.0</span></h2>
+        <p data-release-status>The site will read the latest published release when GitHub is available.</p>
+        <p class="download-buttons">
+          <a class="download-link" data-download="gem" href="https://github.com/RobertFlexx/RSH/releases/latest/download/srsh.gem">Download gem</a>
+          <a class="download-link secondary" data-download="source" href="https://github.com/RobertFlexx/RSH/releases/latest/download/srsh-source.tar.gz">Download source</a>
+          <a class="download-link secondary" data-download="checksums" href="https://github.com/RobertFlexx/RSH/releases/latest/download/SHA256SUMS">SHA256SUMS</a>
+        </p>
+        <p><a href="https://github.com/RobertFlexx/RSH/releases/latest">Open the latest release on GitHub</a></p>
       </div>
 
-      <article class="card">
-        <h2 class="card__title">Files & locations</h2>
-        <div class="table">
-          <div class="row"><div class="cell k"><code>~/.srshrc</code></div><div class="cell v">Your rc file (runs at startup)</div></div>
-          <div class="row"><div class="cell k"><code>~/.srsh/themes</code></div><div class="cell v">Themes (<code>.theme</code> or <code>.json</code>)</div></div>
-          <div class="row"><div class="cell k"><code>~/.srsh/plugins</code></div><div class="cell v">Plugins (<code>.rsh</code> or trusted <code>.rb</code>)</div></div>
-          <div class="row"><div class="cell k"><code>~/.srsh_history</code></div><div class="cell v">Shell history</div></div>
-        </div>
-      </article>
+      <h2>Install the gem file</h2>
+      <p>Ruby 3.2 or newer is required. Building the optional native extension also needs a C compiler and Ruby development headers.</p>
+      <div class="listing">
+        <pre id="install-gem"><code>gem install ./srsh.gem
+srsh --version
+srsh</code></pre>
+        <button class="copy-button" type="button" data-copy-target="install-gem">copy</button>
+      </div>
+
+      <h2>Run from the source archive</h2>
+      <p>The shell can run as Ruby-only code. The native helper is optional when running from a checkout or source archive.</p>
+      <div class="listing">
+        <pre id="install-source"><code>tar -xzf srsh-source.tar.gz
+cd srsh-1.0.0
+make test
+./bin/srsh</code></pre>
+        <button class="copy-button" type="button" data-copy-target="install-source">copy</button>
+      </div>
+
+      <h2>Install from a checkout</h2>
+      <div class="listing">
+        <pre id="install-checkout"><code>git clone https://github.com/RobertFlexx/RSH.git
+cd RSH
+make test
+make PREFIX="$HOME/.local" install</code></pre>
+        <button class="copy-button" type="button" data-copy-target="install-checkout">copy</button>
+      </div>
+      <p>The direct branch snapshot is also available as a <a href="https://github.com/RobertFlexx/RSH/archive/refs/heads/master.zip">zip file</a>.</p>
+
+      <h2>Verify a download</h2>
+      <div class="listing"><pre><code>sha256sum -c SHA256SUMS</code></pre></div>
+      <p>The checksum file covers the stable and versioned artifacts attached to the release.</p>
     </section>
 
-    <!-- ABOUT -->
-    <section class="page" data-page="about">
-      <div class="pagehead">
-        <h1 class="pagehead__title">About srsh</h1>
-        <p class="pagehead__sub">The goal: small, hackable, and not scary to modify.</p>
+    <section class="page" data-page="examples">
+      <div class="page-heading">
+        <h1>RSH examples</h1>
+        <p>These examples correspond to programs in the repository and use features present in the 1.0 tree.</p>
       </div>
 
-      <div class="grid grid--2">
-        <article class="card">
-          <h2 class="card__title">What it is</h2>
-          <p class="card__text">
-            srsh is an interactive shell written in Ruby. It includes a separate scripting language called RSH
-            with its own lexer/parser and an expression evaluator.
-          </p>
-          <p class="card__text">
-            It intentionally avoids Ruby <code>eval</code> in scripts. That keeps RSH predictable and limits
-            “oops I executed a string” moments.
-          </p>
-        </article>
+      <h2>Filter files with a value pipeline</h2>
+      <div class="listing"><pre><code>root := $1
+? root == "" =&gt; root := "."
 
-        <article class="card">
-          <h2 class="card__title">What it isn’t</h2>
-          <ul class="list">
-            <li>Not a full POSIX shell replacement</li>
-            <li>Not trying to be bash/zsh/fish</li>
-            <li>Not doing fancy job control yet</li>
-            <li>Not a “secure sandbox” (Ruby plugins are trusted)</li>
-          </ul>
-        </article>
-      </div>
+ruby := glob(root ++ "/**/*.rb")
+  |&gt; reject(::path =&gt; contains(path, "/vendor/"))
+  |&gt; map(::path =&gt; %[path: path, bytes: len(readfile(path))])
+  |&gt; sort(::item =&gt; 0 - item.bytes)
 
-      <article class="card">
-        <h2 class="card__title">Quick feature list</h2>
-        <div class="grid grid--3">
-          <div class="pill">History + ghost text</div>
-          <div class="pill">Tab completion</div>
-          <div class="pill">Themes (<code>scheme</code>)</div>
-          <div class="pill">Plugins</div>
-          <div class="pill">RSH scripts</div>
-          <div class="pill">Systemfetch</div>
-        </div>
-      </article>
+@ ruby -&gt; item =&gt; = "#{item.bytes}  #{item.path}"</code></pre></div>
+      <p><a href="https://github.com/RobertFlexx/RSH/blob/master/examples/hot.rsh">View examples/hot.rsh</a></p>
+
+      <h2>Use a module</h2>
+      <div class="listing"><pre><code>use "./modules/text.rsh" as text
+
+rows := [" hello ", "", "world"] |&gt; text.clean
+@ rows -&gt; row =&gt; = text.tag(row)</code></pre></div>
+      <p><a href="https://github.com/RobertFlexx/RSH/blob/master/examples/modules.rsh">View examples/modules.rsh</a></p>
+
+      <h2>Run tasks together</h2>
+      <div class="listing"><pre><code>space sys
+  task kernel() =&gt;
+    cmd("uname", "-srmo").check().out.trim()
+
+  task uptime() =&gt;
+    cmd("uptime", "-p").check().out.trim()
+end
+
+jobs := [sys.kernel(), sys.uptime()]
+= await_all(jobs)</code></pre></div>
+      <p><a href="https://github.com/RobertFlexx/RSH/blob/master/examples/paste.rsh">View examples/paste.rsh</a></p>
+
+      <h2>Call the C ABI</h2>
+      <div class="listing"><pre><code>bridge c from "@self"
+  strlen(cstr) -&gt; usize
+end
+
+= c.strlen("simple ruby shell")</code></pre></div>
+      <p><a href="https://github.com/RobertFlexx/RSH/blob/master/examples/bridge.rsh">View examples/bridge.rsh</a></p>
+
+      <h2>More programs</h2>
+      <ul>
+        <li><a href="https://github.com/RobertFlexx/RSH/blob/master/examples/tour.rsh">Language tour</a></li>
+        <li><a href="https://github.com/RobertFlexx/RSH/blob/master/examples/power.rsh">Prototypes, tasks, channels, errors, and structured commands</a></li>
+        <li><a href="https://github.com/RobertFlexx/RSH/blob/master/examples/defer.rsh">Deferred cleanup</a></li>
+        <li><a href="https://github.com/RobertFlexx/RSH/blob/master/examples/meta.rsh">Parsed code and evaluation</a></li>
+        <li><a href="https://github.com/RobertFlexx/RSH/blob/master/examples/calculator.rsh">A larger calculator program</a></li>
+      </ul>
     </section>
 
-    <!-- RUBY -->
-    <section class="page" data-page="ruby">
-      <div class="pagehead">
-        <h1 class="pagehead__title">About Ruby</h1>
-        <p class="pagehead__sub">srsh is built with Ruby - the language is doing the heavy lifting.</p>
+    <section class="page" data-page="project">
+      <div class="page-heading">
+        <h1>Project information</h1>
+        <p>SRSH is developed in the open and distributed under the MIT License.</p>
       </div>
 
-      <article class="card">
-        <p class="card__text">
-          Ruby is a general-purpose language with a strong ecosystem (gems), good text handling, and a “make it nice”
-          vibe. srsh uses Ruby for the shell itself, but RSH stays separate so scripts don’t become random Ruby code.
-        </p>
+      <h2>Source and issues</h2>
+      <table class="reference-table project-links">
+        <tbody>
+          <tr><th>Repository</th><td><a href="https://github.com/RobertFlexx/RSH">github.com/RobertFlexx/RSH</a></td></tr>
+          <tr><th>Releases</th><td><a href="https://github.com/RobertFlexx/RSH/releases">GitHub release archive</a></td></tr>
+          <tr><th>Issues</th><td><a href="https://github.com/RobertFlexx/RSH/issues">Bug reports and feature requests</a></td></tr>
+          <tr><th>License</th><td><a href="https://github.com/RobertFlexx/RSH/blob/master/LICENSE">MIT License</a></td></tr>
+        </tbody>
+      </table>
 
-        <p class="card__text">
-          If you want to learn Ruby basics, a good start is the official Ruby docs and RubyGems. (This site is styled
-          <em>like</em> RubyGems on purpose, it’s a nice layout.)
-        </p>
-      </article>
+      <h2>Repository layout</h2>
+      <div class="listing"><pre><code>bin/srsh                 command entry point
+lib/srsh/                shell and language implementation
+lib/srsh/language/       RSH lexer, parser, values, evaluator
+lib/srsh/shell/          command lexer, executor, jobs, terminal
+ext/srsh_native/         optional C helper
+examples/                sample RSH programs
+language-docs/           long-form language and security notes
+docs/                    this static site
+test/                    language and shell tests</code></pre></div>
 
-      <article class="card">
-        <h2 class="card__title">Ruby-ish resources</h2>
-        <ul class="list">
-          <li>Ruby language docs</li>
-          <li>RubyGems ecosystem</li>
-          <li>Bundler for managing gem dependencies</li>
-        </ul>
-      </article>
-    </section>
+      <h2>Release policy</h2>
+      <p>
+        A tag such as <code>v1.0.0</code> must match <code>Srsh::VERSION</code>. The release workflow runs syntax checks,
+        the test suite, example validation, smoke tests, and the native build. It then creates gem and source artifacts,
+        writes SHA-256 checksums, and creates the GitHub release at that tag.
+      </p>
 
-    <!-- GITHUB -->
-    <section class="page" data-page="github">
-      <div class="pagehead">
-        <h1 class="pagehead__title">GitHub</h1>
-        <p class="pagehead__sub">Source code, issues, and PRs live here.</p>
-      </div>
-    <!-- CUM SACK -->
-      <article class="card">
-        <h2 class="card__title">Repository</h2>
-        <p class="card__text">
-          Repo is here:
-          <a href="https://github.com/RobertFlexx/RSH" target="_blank" rel="noreferrer">github.com/RobertFlexx/RSH</a>
-        </p>
-
-        <div class="codebox">
-          <pre><code>https://github.com/RobertFlexx/RSH</code></pre>
-          <button class="copy" data-copy="https://github.com/RobertFlexx/RSH">Copy</button>
-        </div>
-
-        <p class="card__text">
-          Contributions welcome. Keep PRs readable, keep changes small, and please don’t “refactor the universe” in one go.
-        </p>
-      </article>
-    </section>
-
-    <section class="toast" aria-live="polite" aria-atomic="true" hidden>
-      <div class="toast__inner" data-toast>Copied.</div>
+      <h2>Scope</h2>
+      <p>
+        SRSH is a shell and a language implementation under active development. It is not a secure sandbox and it is not
+        a drop-in Bash interpreter. Ruby plugins and C bridges are trusted, process-level extension points.
+      </p>
     </section>
   </main>
 
-  <footer class="sitefoot">
-    <div class="wrap sitefoot__row">
-      <span>srsh • static site • no tracking • no cookies (not even the tasty ones)</span>
-      <span class="sitefoot__sep">•</span>
-      <a href="#/docs">Docs</a>
-      <span class="sitefoot__sep">•</span>
+  <footer class="site-footer">
+    <div class="site-width">
+      <span>SRSH 1.0 documentation</span>
+      <span>|</span>
+      <a href="#/manual">Manual</a>
+      <span>|</span>
       <a href="#/download">Download</a>
+      <span>|</span>
+      <a href="https://github.com/RobertFlexx/RSH">Source</a>
+      <span>|</span>
+      <span>No tracking or cookies</span>
     </div>
   </footer>
+
+  <div class="copy-notice" data-copy-notice role="status" aria-live="polite" hidden>Copied.</div>
 </body>
 </html>
-<!-- sup bruh diawifowhofawhioa

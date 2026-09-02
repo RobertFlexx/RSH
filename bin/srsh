@@ -1,0 +1,71 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift File.expand_path('../lib', __dir__)
+require 'srsh'
+
+Srsh::ProcessIdentity.install!(executable: File.expand_path(__FILE__))
+
+if defined?(RubyVM::YJIT) && RubyVM::YJIT.respond_to?(:enable) && ENV.fetch('SRSH_YJIT', '1') != '0'
+  RubyVM::YJIT.enable rescue nil
+end
+
+app = Srsh::App.new
+args = ARGV.dup
+app.disable_startup! if args.delete('--norc')
+
+case args[0]
+when '--version', '-V'
+  puts "srsh #{Srsh::VERSION} (Simple Ruby Shell; #{RUBY_ENGINE} #{RUBY_VERSION})"
+  exit 0
+when '--help', '-h'
+  puts <<~TXT
+    usage: srsh [options] [script.rsh [args...]]
+
+      -c COMMAND      run one shell command
+      -e EXPR         evaluate and print one RSH expression
+      --check FILE    parse an RSH script without running it
+      --norc          skip ~/.srshrc and plugins for -c/interactive startup
+      -V, --version   show version
+      -h, --help      show this help
+  TXT
+  exit 0
+when '--check'
+  file = args[1] or abort 'srsh: --check needs a file'
+  exit app.check_script(file)
+when '-c'
+  command = args[1] or abort 'srsh: -c needs a command'
+  begin
+    exit app.run_command(command).to_i
+  rescue StandardError => e
+    warn "srsh: #{e.class}: #{e.message}"
+    exit 1
+  ensure
+    app.history.flush
+  end
+when '-e'
+  expression = args[1] or abort 'srsh: -e needs an expression'
+  begin
+    exit app.run_expression(expression).to_i
+  rescue StandardError => e
+    warn "srsh: #{e.class}: #{e.message}"
+    exit 2
+  ensure
+    app.history.flush
+  end
+else
+  if args[0]
+    script = args.shift
+    app.startup!
+    begin
+      exit app.run_script(script, args).to_i
+    rescue StandardError => e
+      warn "srsh: #{e.class}: #{e.message}"
+      exit 1
+    ensure
+      app.history.flush
+    end
+  end
+end
+
+exit app.interactive
