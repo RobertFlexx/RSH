@@ -50,7 +50,9 @@ module Srsh
     class NativeFunctionValue
       TYPES = {
         'void' => Fiddle::TYPE_VOID,
-        'bool' => Fiddle::TYPE_BOOL,
+        # C _Bool has the size and alignment of an unsigned char. Ruby 3.2's
+        # Fiddle does not expose TYPE_BOOL, so use its portable ABI spelling.
+        'bool' => Fiddle::TYPE_UINT8_T,
         'i8' => Fiddle::TYPE_INT8_T, 'u8' => Fiddle::TYPE_UINT8_T,
         'i16' => Fiddle::TYPE_INT16_T, 'u16' => Fiddle::TYPE_UINT16_T,
         'i32' => Fiddle::TYPE_INT32_T, 'u32' => Fiddle::TYPE_UINT32_T,
