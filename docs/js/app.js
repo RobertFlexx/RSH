@@ -174,7 +174,7 @@
     if (!response.ok) throw new Error("No published release");
     return response.json();
   }).then(function (release) {
-    const tag = String(release.tag_name || "1.0.0");
+    const tag = String(release.tag_name || "1.0.1");
     const version = tag.replace(/^v/, "");
     const gem = findAsset(release, "srsh.gem", /^srsh-[0-9].*\.gem$/);
     const source = findAsset(release, "srsh-source.tar.gz", /^srsh-[0-9].*\.tar\.gz$/);

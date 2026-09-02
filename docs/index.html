@@ -19,7 +19,7 @@
         <strong>Simple Ruby Shell</strong>
         <span>Unix commands and the RSH language</span>
       </div>
-      <div class="version-box">Version <span data-latest-version>1.0.0</span></div>
+      <div class="version-box">Version <span data-latest-version>1.0.1</span></div>
     </div>
     <nav class="main-nav" aria-label="Main navigation">
       <div class="site-width">
@@ -33,7 +33,7 @@
   </header>
 
   <div class="site-width status-line">
-    Current source: 1.0.0&nbsp;&nbsp;|&nbsp;&nbsp;Requires Ruby 3.2 or newer&nbsp;&nbsp;|&nbsp;&nbsp;Unix systems
+    Current source: 1.0.1&nbsp;&nbsp;|&nbsp;&nbsp;Requires Ruby 4.0 or newer&nbsp;&nbsp;|&nbsp;&nbsp;Unix systems
   </div>
 
   <main id="content" class="site-width site-body">
@@ -542,7 +542,7 @@ mark=35</code></pre></div>
       </div>
 
       <div class="download-panel">
-        <h2>Latest release: <span data-latest-version>1.0.0</span></h2>
+        <h2>Latest release: <span data-latest-version>1.0.1</span></h2>
         <p data-release-status>The site will read the latest published release when GitHub is available.</p>
         <p class="download-buttons">
           <a class="download-link" data-download="gem" href="https://github.com/RobertFlexx/RSH/releases/latest/download/srsh.gem">Download gem</a>
@@ -553,7 +553,7 @@ mark=35</code></pre></div>
       </div>
 
       <h2>Install the gem file</h2>
-      <p>Ruby 3.2 or newer is required. Building the optional native extension also needs a C compiler and Ruby development headers.</p>
+      <p>Ruby 4.0 or newer is required. RubyGems installs Fiddle 1.1.8 or newer for native bridges. Building the optional native extension also needs a C compiler and Ruby development headers.</p>
       <div class="listing">
         <pre id="install-gem"><code>gem install ./srsh.gem
 srsh --version
@@ -565,7 +565,7 @@ srsh</code></pre>
       <p>The shell can run as Ruby-only code. The native helper is optional when running from a checkout or source archive.</p>
       <div class="listing">
         <pre id="install-source"><code>tar -xzf srsh-source.tar.gz
-cd srsh-1.0.0
+cd srsh-1.0.1
 make test
 ./bin/srsh</code></pre>
         <button class="copy-button" type="button" data-copy-target="install-source">copy</button>
@@ -671,7 +671,7 @@ test/                    language and shell tests</code></pre></div>
 
       <h2>Release policy</h2>
       <p>
-        A tag such as <code>v1.0.0</code> must match <code>Srsh::VERSION</code>. The release workflow runs syntax checks,
+        A tag such as <code>v1.0.1</code> must match <code>Srsh::VERSION</code>. The release workflow runs syntax checks,
         the test suite, example validation, smoke tests, and the native build. It then creates gem and source artifacts,
         writes SHA-256 checksums, and creates the GitHub release at that tag.
       </p>

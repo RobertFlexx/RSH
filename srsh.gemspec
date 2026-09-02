@@ -13,7 +13,8 @@ Gem::Specification.new do |s|
     'bug_tracker_uri' => 'https://github.com/RobertFlexx/RSH/issues',
     'rubygems_mfa_required' => 'true'
   }
-  s.required_ruby_version = '>= 3.2'
+  s.required_ruby_version = '>= 4.0'
+  s.add_runtime_dependency 'fiddle', '>= 1.1.8'
   s.files = Dir['bin/*', 'lib/**/*.rb', 'ext/**/*.{c,rb}', 'docs/**/*', 'language-docs/**/*', 'examples/**/*', 'README.md', 'LICENSE']
   s.bindir = 'bin'
   s.executables = ['srsh']

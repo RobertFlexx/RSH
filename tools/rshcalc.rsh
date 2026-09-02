@@ -1,6 +1,6 @@
 #!/usr/bin/env srsh
 
-# rshcalc: fast calculator REPL for SRSH 1.0.0+
+# rshcalc: fast calculator REPL for SRSH 1.0.1+
 # The expression hot path is SRSH's cached expression evaluator.
 
 pi  := 3.1415926535897932384626433832795

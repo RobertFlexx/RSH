@@ -1,5 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'srsh/version'
+
+if RUBY_VERSION.partition('.').first.to_i < 4
+  raise LoadError, "srsh #{Srsh::VERSION} requires Ruby 4.0 or newer; found Ruby #{RUBY_VERSION}"
+end
+
 begin
   require 'srsh_native'
 rescue LoadError

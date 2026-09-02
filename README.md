@@ -16,7 +16,7 @@ files := glob("src/**/*.rb")
 
 `|` is still a Unix process pipe. `|>` is an RSH value pipe. They look related because they *are* related, but they move different things.
 
-This tree reports **1.0.0**. It is the unreleased 1.0 line; the older 1.1/1.2 numbers were development snapshots and were a dumb way to version something that had not shipped yet.
+This tree reports **1.0.1**. It keeps the 1.0 language and moves the supported runtime to Ruby 4.
 
 ## What SRSH is trying to be
 
@@ -37,7 +37,7 @@ It is **not a Bash parser**. Existing Bash scripts still belong to Bash. The goa
 
 ## Build and run
 
-Ruby 3.2+ is required.
+Ruby 4.0+ is required. The repository selects the current Ruby 4.0 patch release through `.ruby-version`.
 
 ```sh
 make test
@@ -447,6 +447,6 @@ The code is split by job, not by architectural cosplay. If a file gets big becau
 
 ## Current status
 
-The project is still unreleased. `1.0.0` means “the 1.0 tree,” not “independently audited and incapable of bugs.” A shell has too much surface area for that kind of claim.
+The 1.0 line is released and still young. A shell has too much surface area for claims about being independently audited or incapable of bugs.
 
 Run the tests, beat on it, and report the ugly cases. Those are usually more useful than another feature bullet.

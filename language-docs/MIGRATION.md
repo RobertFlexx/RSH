@@ -41,4 +41,4 @@ A few intentional changes:
 - missing variables can be made errors with `option nounset yes` or `option strict yes`.
 - normal shell wildcard expansion now works; use quoted wildcards when you want literal `*`/`?` characters.
 
-The brief development-only 1.0.x/1.1/1.2 directories were never release lines. The code they introduced is folded into the unreleased 1.0.0 tree.
+The brief development-only 1.0.x/1.1/1.2 directories were never release lines. The code they introduced was folded into the released 1.0 line.

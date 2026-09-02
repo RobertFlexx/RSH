@@ -17,6 +17,7 @@ jobs:
   release:
     name: Test, package, and release
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Check out the tagged source
@@ -24,10 +25,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Ruby
+      - name: Set up Ruby 4
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.2"
+          ruby-version: "4.0"
 
       - name: Check the tag and project version
         id: version
@@ -66,6 +67,18 @@ jobs:
             "srsh-${VERSION}.tar.gz" \
             srsh.gem \
             srsh-source.tar.gz > SHA256SUMS
+
+      - name: Verify the packaged gem
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          gem install --no-document \
+            --install-dir "$RUNNER_TEMP/srsh-gem" \
+            --bindir "$RUNNER_TEMP/srsh-bin" \
+            "dist/srsh-${VERSION}.gem"
+          GEM_HOME="$RUNNER_TEMP/srsh-gem" \
+            "$RUNNER_TEMP/srsh-bin/srsh" --version
 
       - name: Create the GitHub release
         env:

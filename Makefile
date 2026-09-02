@@ -6,9 +6,13 @@ DLEXT := $(shell $(RUBY) -rrbconfig -e 'print RbConfig::CONFIG["DLEXT"]')
 NATIVE := ext/srsh_native/srsh_native.$(DLEXT)
 
 .DEFAULT_GOAL := test
-.PHONY: test syntax examples smoke native clean install uninstall release-check
+.PHONY: runtime test syntax examples smoke native clean install uninstall release-check
 
-test:
+runtime:
+	@$(RUBY) -e 'abort "srsh requires Ruby 4.0 or newer" if RUBY_VERSION.split(".").first.to_i < 4'
+	@$(RUBY) -e 'puts "ruby runtime: #{RUBY_VERSION}"'
+
+test: runtime
 	$(RUBY) -w -Ilib -Itest test/test_language.rb
 	$(RUBY) -w -Ilib -Itest test/test_shell.rb
 
@@ -17,18 +21,18 @@ syntax:
 		xargs -0 -n1 $(RUBY) -c >/dev/null
 	@echo "ruby syntax: ok"
 
-examples:
+examples: runtime
 	@set -e; for f in examples/*.rsh; do ./bin/srsh --norc --check "$$f" >/dev/null; done
 	@echo "rsh examples: syntax ok"
 
-smoke:
+smoke: runtime
 	./bin/srsh --norc examples/power.rsh >/dev/null
 	./bin/srsh --norc examples/modules.rsh >/dev/null
 	./bin/srsh --norc examples/bridge.rsh >/dev/null
 	./bin/srsh --norc examples/defer.rsh >/dev/null
 	@echo "examples: run ok"
 
-native:
+native: runtime
 	cd ext/srsh_native && $(RUBY) extconf.rb && $(MAKE)
 
 release-check: syntax test examples smoke native test
